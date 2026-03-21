@@ -556,48 +556,53 @@ class _ProfessionalMetricsRow extends StatelessWidget {
     IconData icon,
     Color color,
   ) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 16),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 16),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
               ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
             ),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 10,
-              ),
+          ),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 10,
             ),
-          ],
-        ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
