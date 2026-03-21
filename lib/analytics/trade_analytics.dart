@@ -30,6 +30,8 @@ class PortfolioStats {
   final double riskOfRuin;
   final int maxConsecWins;
   final int maxConsecLosses;
+  final int currentWinStreak;
+  final int currentLossStreak;
   final double avgHoldingMinutes;
 
   /// Checklist compliance 0–100 (percentage of items checked across all trades)
@@ -70,6 +72,8 @@ class PortfolioStats {
     required this.riskOfRuin,
     required this.maxConsecWins,
     required this.maxConsecLosses,
+    required this.currentWinStreak,
+    required this.currentLossStreak,
     required this.avgHoldingMinutes,
     required this.disciplineScore,
     required this.checklistScore,
@@ -334,6 +338,21 @@ class TradeAnalytics {
       rulesFollowedPct: rulesFollowedPct,
     );
 
+    // Current streak (count from end of sorted list)
+    int currentWinStreak = 0;
+    int currentLossStreak = 0;
+    for (int i = sorted.length - 1; i >= 0; i--) {
+      if (sorted[i].isWin) {
+        if (currentLossStreak > 0) break;
+        currentWinStreak++;
+      } else if (sorted[i].isLoss) {
+        if (currentWinStreak > 0) break;
+        currentLossStreak++;
+      } else {
+        break; // breakeven stops streak
+      }
+    }
+
     return PortfolioStats(
       totalTrades: total,
       wins: winCount,
@@ -362,6 +381,8 @@ class TradeAnalytics {
       riskOfRuin: riskOfRuin,
       maxConsecWins: maxCW,
       maxConsecLosses: maxCL,
+      currentWinStreak: currentWinStreak,
+      currentLossStreak: currentLossStreak,
       avgHoldingMinutes: avgHoldingMinutes,
       disciplineScore: disciplineScore,
       checklistScore: checklistScore,
@@ -474,6 +495,8 @@ class TradeAnalytics {
         riskOfRuin: 0,
         maxConsecWins: 0,
         maxConsecLosses: 0,
+        currentWinStreak: 0,
+        currentLossStreak: 0,
         avgHoldingMinutes: 0,
         disciplineScore: 100,
         checklistScore: 0,

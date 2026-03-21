@@ -30,8 +30,27 @@ class _DesktopShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    final isTradeForm = location == '/trades/new' ||
+        (location.startsWith('/trades/') && location.endsWith('/edit'));
+
     return Scaffold(
       backgroundColor: AppColors.background,
+      floatingActionButton: isTradeForm
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => context.go('/trades/new'),
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text(
+                'Log Trade',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
       body: Row(
         children: [
           const SidebarNav(),

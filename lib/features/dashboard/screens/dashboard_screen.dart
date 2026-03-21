@@ -11,6 +11,8 @@ import '../../../shared/widgets/common/common_widgets.dart';
 import '../../../shared/widgets/charts/radar_chart_widget.dart';
 import '../../../shared/widgets/charts/trade_calendar_widget.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/premarket_checklist_provider.dart';
+import '../../../analytics/trade_analytics.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -23,6 +25,7 @@ class DashboardScreen extends ConsumerWidget {
     final alertsAsync = ref.watch(dashboardAlertsProvider);
     final startBalanceAsync = ref.watch(startingBalanceProvider);
     final startBalance = startBalanceAsync.value ?? 10000.0;
+    final checklist = ref.watch(premarketChecklistProvider);
     final isMobile = MediaQuery.of(context).size.width < _kMobileBreak;
 
     return Scrollbar(
@@ -31,6 +34,9 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Pre-Market Checklist ────────────────────────────────────────
+            _PremarketChecklistCard(state: checklist),
+            const SizedBox(height: AppSpacing.md),
             // ── Safety Alert Banners ──────────────────────────────────────────
             alertsAsync.when(
               data: (alerts) => alerts.isEmpty
@@ -43,6 +49,12 @@ class DashboardScreen extends ConsumerWidget {
                     ),
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
+            ),
+            // ── Streak Tracker ────────────────────────────────────────────
+            statsAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (stats) => _streakBanner(stats),
             ),
 
             // ── Metric Cards + Stats ──────────────────────────────────────────
@@ -868,4 +880,199 @@ class _DisciplineRingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PremarketChecklistCard extends StatefulWidget {
+  final PremarketChecklistState state;
+  const _PremarketChecklistCard({required this.state});
+
+  @override
+  State<_PremarketChecklistCard> createState() =>
+      _PremarketChecklistCardState();
+}
+
+class _PremarketChecklistCardState extends State<_PremarketChecklistCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = widget.state;
+    final pct =
+        state.totalCount > 0 ? state.completedCount / state.totalCount : 0.0;
+
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  const Icon(Icons.fact_check_rounded,
+                      color: AppColors.primary, size: 20),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'PRE-MARKET READINESS',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(2),
+                          child: LinearProgressIndicator(
+                            value: pct,
+                            minHeight: 4,
+                            backgroundColor: AppColors.surfaceElevated,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              state.allDone
+                                  ? AppColors.profit
+                                  : AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color:
+                          (state.allDone ? AppColors.profit : AppColors.primary)
+                              .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      state.allDone
+                          ? 'READY'
+                          : '${state.completedCount}/${state.totalCount}',
+                      style: TextStyle(
+                        color: state.allDone
+                            ? AppColors.profit
+                            : AppColors.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    _expanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded)
+            Consumer(builder: (context, ref, _) {
+              return Padding(
+                padding: const EdgeInsets.only(
+                    left: AppSpacing.md,
+                    right: AppSpacing.md,
+                    bottom: AppSpacing.md),
+                child: Column(
+                  children: state.items.map((item) {
+                    final isChecked = state.checks[item] ?? false;
+                    return InkWell(
+                      onTap: () => ref
+                          .read(premarketChecklistProvider.notifier)
+                          .toggle(item),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isChecked
+                                  ? Icons.check_circle_rounded
+                                  : Icons.radio_button_unchecked_rounded,
+                              color: isChecked
+                                  ? AppColors.profit
+                                  : AppColors.textMuted,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                item,
+                                style: TextStyle(
+                                  color: isChecked
+                                      ? AppColors.textPrimary
+                                      : AppColors.textSecondary,
+                                  fontSize: 13,
+                                  decoration: isChecked
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+Widget _streakBanner(PortfolioStats stats) {
+  if (stats.currentWinStreak < 2 && stats.currentLossStreak < 2) {
+    return const SizedBox.shrink();
+  }
+
+  final isWin = stats.currentWinStreak >= 2;
+  final count = isWin ? stats.currentWinStreak : stats.currentLossStreak;
+  final color = isWin ? AppColors.profit : AppColors.loss;
+  final icon =
+      isWin ? Icons.local_fire_department_rounded : Icons.warning_amber_rounded;
+  final message = isWin
+      ? '🔥 $count-trade winning streak! Stay disciplined and stick to the plan.'
+      : '⚠️ $count-trade losing streak. Take a breath, review your rules, and don\'t revenge trade.';
+
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+    padding: const EdgeInsets.all(AppSpacing.md),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      border: Border.all(color: color.withValues(alpha: 0.2)),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Text(
+            message,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
