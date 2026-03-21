@@ -7,6 +7,7 @@ import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/trades/screens/trades_screen.dart';
 import '../../features/trades/screens/trade_form_screen.dart';
 import '../../features/trades/screens/trade_detail_screen.dart';
+import '../../features/trades/screens/import_trades_screen.dart';
 import '../../features/analytics_feature/screens/analytics_screen.dart';
 import '../../features/weekly_review/screens/weekly_review_list_screen.dart';
 import '../../features/weekly_review/screens/weekly_new_review_screen.dart';
@@ -47,6 +48,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const TradesScreen(),
             routes: [
               GoRoute(path: 'new', builder: (_, __) => const TradeFormScreen()),
+              GoRoute(
+                  path: 'import',
+                  builder: (_, __) => const ImportTradesScreen()),
               GoRoute(
                 path: ':id',
                 builder: (_, state) =>

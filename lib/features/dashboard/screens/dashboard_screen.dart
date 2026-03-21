@@ -12,6 +12,8 @@ import '../../../shared/widgets/charts/radar_chart_widget.dart';
 import '../../../shared/widgets/charts/trade_calendar_widget.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/premarket_checklist_provider.dart';
+import '../widgets/monthly_target_card.dart';
+import '../widgets/trade_highlight_card.dart';
 import '../../../analytics/trade_analytics.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -54,9 +56,13 @@ class DashboardScreen extends ConsumerWidget {
             statsAsync.when(
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
-              data: (stats) => _streakBanner(stats),
+              data: (stats) => Column(children: [
+                _streakBanner(stats),
+                const SizedBox(height: AppSpacing.md),
+                const MonthlyTargetCard(),
+              ]),
             ),
-
+            const SizedBox(height: AppSpacing.md),
             // ── Metric Cards + Stats ──────────────────────────────────────────
             statsAsync.when(
               loading: () => _metricsShimmer(isMobile),
@@ -216,7 +222,29 @@ class DashboardScreen extends ConsumerWidget {
                       ],
                     ),
 
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.lg),
+                  // Highs & Lows Row
+                  ref.watch(bestWorstTradesProvider).when(
+                        data: (data) => Row(
+                          children: [
+                            if (data.best != null)
+                              TradeHighlightCard(
+                                  trade: data.best!,
+                                  title: 'BEST TRADE',
+                                  isBest: true),
+                            if (data.best != null && data.worst != null)
+                              const SizedBox(width: AppSpacing.md),
+                            if (data.worst != null)
+                              TradeHighlightCard(
+                                  trade: data.worst!,
+                                  title: 'WORST TRADE',
+                                  isBest: false),
+                          ],
+                        ),
+                        loading: () => const SizedBox(),
+                        error: (_, __) => const SizedBox(),
+                      ),
+                  const SizedBox(height: AppSpacing.xl),
                   // Row 4: Equity Curve + Drawdown
                   if (isMobile) ...[
                     GlassCard(

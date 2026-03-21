@@ -10,6 +10,7 @@ class Account {
   final AccountType accountType;
   final int leverage;
   final double? targetBalance;
+  final double? monthlyRTarget;
   final bool isArchived;
   final DateTime createdAt;
 
@@ -23,6 +24,7 @@ class Account {
     this.accountType = AccountType.live,
     this.leverage = 1,
     this.targetBalance,
+    this.monthlyRTarget,
     this.isArchived = false,
     required this.createdAt,
   });
@@ -40,6 +42,9 @@ class Account {
         targetBalance: map['target_balance'] != null
             ? (map['target_balance'] as num).toDouble()
             : null,
+        monthlyRTarget: map['monthly_r_target'] != null
+            ? (map['monthly_r_target'] as num).toDouble()
+            : null,
         isArchived: map['is_archived'] as bool? ?? false,
         createdAt: DateTime.parse(map['created_at'] as String),
       );
@@ -53,6 +58,7 @@ class Account {
         'account_type': accountType.name,
         'leverage': leverage,
         'target_balance': targetBalance,
+        'monthly_r_target': monthlyRTarget,
         'is_archived': isArchived,
       };
 
@@ -66,6 +72,7 @@ class Account {
     AccountType? accountType,
     int? leverage,
     double? targetBalance,
+    double? monthlyRTarget,
     bool? isArchived,
     DateTime? createdAt,
   }) =>
@@ -79,6 +86,7 @@ class Account {
         accountType: accountType ?? this.accountType,
         leverage: leverage ?? this.leverage,
         targetBalance: targetBalance ?? this.targetBalance,
+        monthlyRTarget: monthlyRTarget ?? this.monthlyRTarget,
         isArchived: isArchived ?? this.isArchived,
         createdAt: createdAt ?? this.createdAt,
       );

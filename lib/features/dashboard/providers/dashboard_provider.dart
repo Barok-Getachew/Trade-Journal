@@ -120,3 +120,45 @@ final dashboardAlertsProvider = FutureProvider<List<String>>((ref) async {
 
   return alerts;
 });
+
+// ── Monthly R-Target ──────────────────────────────────────────────────────────
+
+final monthlyRTargetProvider =
+    FutureProvider<({double current, double target})>((ref) async {
+  final account = ref.watch(selectedAccountProvider);
+  if (account == null) return (current: 0.0, target: 0.0);
+
+  final trades = await ref.watch(allTradesProvider.future);
+  final now = DateTime.now();
+  final monthStart = DateTime(now.year, now.month, 1);
+
+  final monthlyTrades = trades
+      .where((t) => t.accountId == account.id && t.entryAt.isAfter(monthStart));
+
+  final totalR = monthlyTrades.fold<double>(0, (sum, t) => sum + t.rMultiple);
+  return (current: totalR, target: account.monthlyRTarget ?? 0.0);
+});
+
+// ── Best/Worst Trades ─────────────────────────────────────────────────────────
+
+final bestWorstTradesProvider =
+    FutureProvider<({Trade? best, Trade? worst})>((ref) async {
+  final account = ref.watch(selectedAccountProvider);
+  final trades = await ref.watch(allTradesProvider.future);
+
+  final accountTrades = account == null
+      ? trades
+      : trades.where((t) => t.accountId == account.id).toList();
+
+  if (accountTrades.isEmpty) return (best: null, worst: null);
+
+  Trade? best;
+  Trade? worst;
+
+  for (final t in accountTrades) {
+    if (best == null || t.rMultiple > best.rMultiple) best = t;
+    if (worst == null || t.rMultiple < worst.rMultiple) worst = t;
+  }
+
+  return (best: best, worst: worst);
+});

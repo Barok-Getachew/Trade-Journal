@@ -96,6 +96,12 @@ class TradesScreen extends ConsumerWidget {
                 },
               ),
               const SizedBox(width: AppSpacing.sm),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.upload_file_rounded, size: 16),
+                label: const Text('Import'),
+                onPressed: () => context.push('/trades/import'),
+              ),
+              const SizedBox(width: AppSpacing.sm),
               ElevatedButton.icon(
                 icon: const Icon(Icons.add_rounded, size: 16),
                 label: const Text('New Trade'),
