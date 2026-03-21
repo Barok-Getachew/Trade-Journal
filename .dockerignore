@@ -1,0 +1,14 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+ios/
+android/
+test/
+.gitignore
+README.md
+pubspec.lock
+# keep pubspec.yaml and assets/ lib/ web/
