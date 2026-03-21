@@ -119,6 +119,12 @@ class _Header extends StatelessWidget {
                   fontSize: 22,
                   fontWeight: FontWeight.w700)),
           const Spacer(),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.compare_arrows_rounded, size: 16),
+            label: const Text('Compare'),
+            onPressed: () => context.push('/accounts/compare'),
+          ),
+          const SizedBox(width: 8),
           ElevatedButton.icon(
             icon: const Icon(Icons.add_rounded, size: 16),
             label: const Text('Add Account'),

@@ -14,6 +14,7 @@ import '../providers/dashboard_provider.dart';
 import '../providers/premarket_checklist_provider.dart';
 import '../widgets/monthly_target_card.dart';
 import '../widgets/trade_highlight_card.dart';
+import '../widgets/weekly_summary_card.dart';
 import '../../../analytics/trade_analytics.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -38,6 +39,8 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             // ── Pre-Market Checklist ────────────────────────────────────────
             _PremarketChecklistCard(state: checklist),
+            const SizedBox(height: AppSpacing.md),
+            const WeeklySummaryCard(),
             const SizedBox(height: AppSpacing.md),
             // ── Safety Alert Banners ──────────────────────────────────────────
             alertsAsync.when(

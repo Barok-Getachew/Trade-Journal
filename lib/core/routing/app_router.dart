@@ -13,6 +13,7 @@ import '../../features/weekly_review/screens/weekly_review_list_screen.dart';
 import '../../features/weekly_review/screens/weekly_new_review_screen.dart';
 import '../../features/monthly_audit/screens/monthly_audit_screen.dart';
 import '../../features/accounts/screens/account_manager_screen.dart';
+import '../../features/accounts/screens/account_comparison_screen.dart';
 import '../../features/daily_review/screens/daily_review_screen.dart';
 import '../../features/risk_rules/screens/risk_rules_screen.dart';
 import '../../shared/widgets/layout/app_shell.dart';
@@ -102,6 +103,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/accounts',
             builder: (_, __) => const AccountManagerScreen(),
+            routes: [
+              GoRoute(
+                path: 'compare',
+                builder: (_, __) => const AccountComparisonScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/daily-review',

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../shared/providers/theme_provider.dart';
 import 'sidebar_nav.dart';
 
 class AppShell extends StatelessWidget {
@@ -93,6 +95,20 @@ class _MobileShell extends StatelessWidget {
               fontSize: 17),
         ),
         actions: [
+          Consumer(
+            builder: (ctx, ref, _) {
+              final isLight = ref.watch(themeProvider) == ThemeMode.light;
+              return IconButton(
+                icon: Icon(
+                  isLight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  color: AppColors.textSecondary,
+                ),
+                tooltip:
+                    isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode',
+                onPressed: () => ref.read(themeProvider.notifier).toggle(),
+              );
+            },
+          ),
           // Hamburger opens full sidebar as a Drawer
           Builder(
             builder: (ctx) => IconButton(
@@ -246,14 +262,16 @@ class _BottomNavItem extends StatelessWidget {
 
 // ── Shared App Bar (desktop only) ─────────────────────────────────────────────
 
-class _AppBar extends StatelessWidget {
+class _AppBar extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLight = ref.watch(themeProvider) == ThemeMode.light;
     return Container(
       height: 60,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border:
+            Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
@@ -263,6 +281,15 @@ class _AppBar extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const Spacer(),
+          IconButton(
+            icon: Icon(
+              isLight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              size: 18,
+            ),
+            color: AppColors.textSecondary,
+            tooltip: isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode',
+            onPressed: () => ref.read(themeProvider.notifier).toggle(),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, size: 18),
             color: AppColors.textSecondary,
