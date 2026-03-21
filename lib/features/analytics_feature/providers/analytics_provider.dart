@@ -89,3 +89,95 @@ final checklistComparisonProvider =
   final trades = await ref.watch(analyticsTradesProvider.future);
   return TradeAnalytics.checklistComparison(trades, 10000.0);
 });
+
+// ── Calendar daily P&L for Analytics ─────────────────────────────────────────
+
+final analyticsDailyPnlProvider =
+    FutureProvider<Map<DateTime, double>>((ref) async {
+  final trades = await ref.watch(analyticsTradesProvider.future);
+  final map = <DateTime, double>{};
+  for (final t in trades) {
+    final date = DateTime(t.exitAt.year, t.exitAt.month, t.exitAt.day);
+    map[date] = (map[date] ?? 0.0) + t.netPnl;
+  }
+  return map;
+});
+
+final analyticsTradeCountProvider =
+    FutureProvider<Map<DateTime, int>>((ref) async {
+  final trades = await ref.watch(analyticsTradesProvider.future);
+  final map = <DateTime, int>{};
+  for (final t in trades) {
+    final date = DateTime(t.exitAt.year, t.exitAt.month, t.exitAt.day);
+    map[date] = (map[date] ?? 0) + 1;
+  }
+  return map;
+});
+
+// ── R-Multiple histogram buckets ──────────────────────────────────────────────
+
+class HistogramBucket {
+  final String label;
+  final int count;
+  final double minR;
+  final double maxR;
+  const HistogramBucket({
+    required this.label,
+    required this.count,
+    required this.minR,
+    required this.maxR,
+  });
+}
+
+final rMultipleHistogramProvider =
+    FutureProvider<List<HistogramBucket>>((ref) async {
+  final trades = await ref.watch(analyticsTradesProvider.future);
+
+  // 8 buckets: < -3, -3→-2, -2→-1, -1→0, 0→1, 1→2, 2→3, > 3
+  final edges = [-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0];
+  final labels = [
+    '< -3R',
+    '-3→-2R',
+    '-2→-1R',
+    '-1→0R',
+    '0→1R',
+    '1→2R',
+    '2→3R',
+    '> 3R',
+  ];
+
+  final counts = List<int>.filled(8, 0);
+  for (final t in trades) {
+    final r = t.rMultiple;
+    if (r < -3) {
+      counts[0]++;
+    } else if (r < -2) {
+      counts[1]++;
+    } else if (r < -1) {
+      counts[2]++;
+    } else if (r < 0) {
+      counts[3]++;
+    } else if (r < 1) {
+      counts[4]++;
+    } else if (r < 2) {
+      counts[5]++;
+    } else if (r < 3) {
+      counts[6]++;
+    } else {
+      counts[7]++;
+    }
+  }
+
+  final minRs = [double.negativeInfinity, ...edges];
+  final maxRs = [...edges, double.infinity];
+
+  return List.generate(
+    8,
+    (i) => HistogramBucket(
+      label: labels[i],
+      count: counts[i],
+      minR: minRs[i],
+      maxR: maxRs[i],
+    ),
+  );
+});

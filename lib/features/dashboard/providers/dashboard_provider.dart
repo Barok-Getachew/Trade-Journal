@@ -45,6 +45,20 @@ final dashboardStatsProvider = FutureProvider<PortfolioStats>((ref) async {
   return TradeAnalytics.compute(trades, balance);
 });
 
+// ── Starting balance for equity curve ────────────────────────────────────────
+
+final startingBalanceProvider = FutureProvider<double>((ref) async {
+  final selectedAccount = ref.watch(selectedAccountProvider);
+  final accounts = await ref.watch(accountsProvider.future);
+
+  if (selectedAccount != null) {
+    return selectedAccount.initialBalance;
+  }
+  return accounts.isEmpty
+      ? 10000.0
+      : accounts.fold<double>(0, (sum, a) => sum + a.initialBalance);
+});
+
 // ── Recent trades (last 30 days for dashboard) ────────────────────────────────
 
 final recentTradesProvider = FutureProvider<List<Trade>>((ref) async {

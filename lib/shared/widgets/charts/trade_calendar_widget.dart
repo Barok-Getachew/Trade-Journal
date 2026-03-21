@@ -6,8 +6,13 @@ import '../../../core/utils/formatters.dart';
 
 class TradeCalendar extends StatefulWidget {
   final Map<DateTime, double> dailyPnl;
+  final Map<DateTime, int>? tradeCounts;
 
-  const TradeCalendar({super.key, required this.dailyPnl});
+  const TradeCalendar({
+    super.key,
+    required this.dailyPnl,
+    this.tradeCounts,
+  });
 
   @override
   State<TradeCalendar> createState() => _TradeCalendarState();
@@ -155,12 +160,14 @@ class _TradeCalendarState extends State<TradeCalendar> {
           final date =
               DateTime(_currentMonth.year, _currentMonth.month, dayCount);
           final pnl = widget.dailyPnl[date] ?? 0;
+          final count = widget.tradeCounts?[date];
           weekTotal += pnl;
           if (widget.dailyPnl.containsKey(date)) anyDataInWeek = true;
 
           rowCells.add(_CalendarDayCell(
               day: dayCount,
               pnl: pnl,
+              tradeCount: count,
               hasData: widget.dailyPnl.containsKey(date)));
           dayCount++;
         } else {
@@ -182,9 +189,14 @@ class _CalendarDayCell extends StatelessWidget {
   final int day;
   final double pnl;
   final bool hasData;
+  final int? tradeCount;
 
-  const _CalendarDayCell(
-      {required this.day, required this.pnl, required this.hasData});
+  const _CalendarDayCell({
+    required this.day,
+    required this.pnl,
+    required this.hasData,
+    this.tradeCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -216,13 +228,37 @@ class _CalendarDayCell extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            day.toString(),
-            style: TextStyle(
-              color: hasData ? AppColors.textPrimary : AppColors.textMuted,
-              fontSize: 10,
-              fontWeight: hasData ? FontWeight.bold : FontWeight.normal,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                day.toString(),
+                style: TextStyle(
+                  color: hasData ? AppColors.textPrimary : AppColors.textMuted,
+                  fontSize: 10,
+                  fontWeight: hasData ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              if (tradeCount != null && tradeCount! > 0) ...[
+                const SizedBox(width: 2),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    '$tradeCount',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 7,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
           if (hasData && pnl != 0) ...[
             const SizedBox(height: 4),

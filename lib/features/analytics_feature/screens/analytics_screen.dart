@@ -6,6 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/cards/glass_card.dart';
 import '../../../shared/widgets/charts/chart_widgets.dart';
+import '../../../shared/widgets/charts/trade_calendar_widget.dart';
 import '../../../shared/widgets/common/common_widgets.dart';
 import '../providers/analytics_provider.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
@@ -23,6 +24,9 @@ class AnalyticsScreen extends ConsumerWidget {
     final discAsync = ref.watch(disciplineComparisonProvider);
     final statsAsync = ref.watch(dashboardStatsProvider);
     final checkAsync = ref.watch(checklistComparisonProvider);
+    final histAsync = ref.watch(rMultipleHistogramProvider);
+    final calPnlAsync = ref.watch(analyticsDailyPnlProvider);
+    final calCountAsync = ref.watch(analyticsTradeCountProvider);
     final isMobile = MediaQuery.of(context).size.width < 700;
 
     return Scrollbar(
@@ -37,6 +41,30 @@ class AnalyticsScreen extends ConsumerWidget {
                   const LoadingShimmer(width: double.infinity, height: 100),
               error: (_, __) => const SizedBox.shrink(),
               data: (stats) => _ProfessionalMetricsRow(stats: stats),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // ── Payoff Distribution ───────────────────────────────────────
+            GlassCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SectionHeader(
+                    title: 'Payoff Distribution',
+                    subtitle:
+                        'How your trades distribute across R-multiple buckets',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  histAsync.when(
+                    loading: () => const LoadingShimmer(
+                      width: double.infinity,
+                      height: 200,
+                    ),
+                    error: (e, _) => Text(e.toString()),
+                    data: (buckets) => RMultipleHistogram(buckets: buckets),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             GlassCard(
@@ -371,6 +399,32 @@ class AnalyticsScreen extends ConsumerWidget {
                     data: (segs) => SegmentBarChart(
                       data:
                           segs.map((s) => MapEntry(s.label, s.totalR)).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // ── Monthly P&L Calendar ──────────────────────────────────────
+            GlassCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SectionHeader(
+                    title: 'Monthly P\u0026L Calendar',
+                    subtitle: 'Daily profit & loss with trade count per day',
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  calPnlAsync.when(
+                    loading: () => const LoadingShimmer(
+                      width: double.infinity,
+                      height: 200,
+                    ),
+                    error: (e, _) => Text(e.toString()),
+                    data: (pnl) => TradeCalendar(
+                      dailyPnl: pnl,
+                      tradeCounts: calCountAsync.value,
                     ),
                   ),
                 ],

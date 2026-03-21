@@ -21,6 +21,8 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(dashboardStatsProvider);
     final alertsAsync = ref.watch(dashboardAlertsProvider);
+    final startBalanceAsync = ref.watch(startingBalanceProvider);
+    final startBalance = startBalanceAsync.value ?? 10000.0;
     final isMobile = MediaQuery.of(context).size.width < _kMobileBreak;
 
     return Scrollbar(
@@ -223,7 +225,7 @@ class DashboardScreen extends ConsumerWidget {
                             height: 200,
                             child: EquityCurveChart(
                               points: stats.equityCurve,
-                              startBalance: 10000,
+                              startBalance: startBalance,
                             ),
                           ),
                         ],
@@ -276,7 +278,7 @@ class DashboardScreen extends ConsumerWidget {
                                   height: 200,
                                   child: EquityCurveChart(
                                     points: stats.equityCurve,
-                                    startBalance: 10000,
+                                    startBalance: startBalance,
                                   ),
                                 ),
                               ],

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../analytics/trade_analytics.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../features/analytics_feature/providers/analytics_provider.dart';
 
 /// Animated equity curve line chart using fl_chart.
 class EquityCurveChart extends StatelessWidget {
@@ -283,6 +285,202 @@ class SegmentBarChart extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+/// R-Multiple Payoff Distribution histogram using fl_chart BarChart.
+class RMultipleHistogram extends StatefulWidget {
+  final List<HistogramBucket> buckets;
+
+  const RMultipleHistogram({super.key, required this.buckets});
+
+  @override
+  State<RMultipleHistogram> createState() => _RMultipleHistogramState();
+}
+
+class _RMultipleHistogramState extends State<RMultipleHistogram> {
+  int? _touchedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = widget.buckets.fold<int>(0, (s, b) => s + b.count);
+
+    if (total == 0) {
+      return const Center(
+        child:
+            Text('No trades yet', style: TextStyle(color: AppColors.textMuted)),
+      );
+    }
+
+    final maxCount =
+        widget.buckets.map((b) => b.count).reduce((a, b) => a > b ? a : b);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 200,
+          child: BarChart(
+            BarChartData(
+              backgroundColor: Colors.transparent,
+              alignment: BarChartAlignment.spaceAround,
+              maxY: maxCount * 1.35,
+              barTouchData: BarTouchData(
+                touchCallback: (event, response) {
+                  setState(() {
+                    if (event is FlTapUpEvent || event is FlPointerHoverEvent) {
+                      _touchedIndex = response?.spot?.touchedBarGroupIndex;
+                    } else if (event is FlLongPressEnd ||
+                        event is FlPanEndEvent) {
+                      _touchedIndex = null;
+                    }
+                  });
+                },
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => AppColors.chartTooltipBg,
+                  getTooltipItem: (group, _, rod, __) {
+                    final b = widget.buckets[group.x.toInt()];
+                    final pct = total > 0 ? (b.count / total * 100) : 0.0;
+                    return BarTooltipItem(
+                      '${b.label}\n${b.count} trades\n${pct.toStringAsFixed(1)}%',
+                      const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 11),
+                    );
+                  },
+                ),
+              ),
+              titlesData: FlTitlesData(
+                leftTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, _) {
+                      final idx = value.toInt();
+                      if (idx < 0 || idx >= widget.buckets.length)
+                        return const SizedBox();
+                      final count = widget.buckets[idx].count;
+                      if (count == 0) return const SizedBox();
+                      return Text(
+                        '$count',
+                        style: TextStyle(
+                          color: idx < 4 ? AppColors.loss : AppColors.profit,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 32,
+                    getTitlesWidget: (value, _) {
+                      final idx = value.toInt();
+                      if (idx < 0 || idx >= widget.buckets.length)
+                        return const SizedBox();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          widget.buckets[idx].label,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 8,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                horizontalInterval: maxCount / 4,
+                getDrawingHorizontalLine: (_) =>
+                    FlLine(color: AppColors.chartGrid, strokeWidth: 1),
+              ),
+              borderData: FlBorderData(show: false),
+              barGroups: List.generate(widget.buckets.length, (i) {
+                final b = widget.buckets[i];
+                final isLoss = b.maxR <= 0;
+                final isProfit = b.minR >= 0;
+                final isTouched = _touchedIndex == i;
+
+                Color barColor;
+                if (isLoss) {
+                  barColor = AppColors.loss;
+                } else if (isProfit) {
+                  barColor = AppColors.profit;
+                } else {
+                  barColor = AppColors.textMuted; // 0→1R straddles zero
+                }
+
+                return BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: b.count.toDouble(),
+                      color: barColor.withOpacity(isTouched ? 1.0 : 0.75),
+                      width: 24,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(4),
+                      ),
+                      backDrawRodData: BackgroundBarChartRodData(
+                        show: true,
+                        toY: maxCount * 1.35,
+                        color: AppColors.surfaceElevated.withOpacity(0.3),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        // Legend
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _legendDot(AppColors.loss, 'Loss'),
+            const SizedBox(width: AppSpacing.md),
+            _legendDot(AppColors.profit, 'Profit'),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              'Total: $total trades',
+              style: const TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label,
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+      ],
     );
   }
 }
