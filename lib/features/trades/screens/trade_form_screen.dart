@@ -62,6 +62,7 @@ class TradeFormState {
   final String reflection;
   final String? screenshotPath; // local file path (desktop)
   final Uint8List? screenshotBytes; // picked bytes (web/preview)
+  final String? screenshotUrl; // remote URL (persisted)
 
   TradeFormState({
     this.step = 0,
@@ -98,6 +99,7 @@ class TradeFormState {
     this.reflection = '',
     this.screenshotPath,
     this.screenshotBytes,
+    this.screenshotUrl,
   })  : entryAt = entryAt ?? DateTime.now(),
         exitAt = exitAt ?? DateTime.now();
 
@@ -136,6 +138,7 @@ class TradeFormState {
     String? reflection,
     Object? screenshotPath = _sentinel,
     Object? screenshotBytes = _sentinel,
+    String? screenshotUrl,
   }) {
     return TradeFormState(
         step: step ?? this.step,
@@ -175,7 +178,8 @@ class TradeFormState {
             : screenshotPath as String?,
         screenshotBytes: identical(screenshotBytes, _sentinel)
             ? this.screenshotBytes
-            : screenshotBytes as Uint8List?);
+            : screenshotBytes as Uint8List?,
+        screenshotUrl: screenshotUrl ?? this.screenshotUrl);
   }
 }
 
@@ -223,6 +227,7 @@ class TradeFormNotifier extends StateNotifier<TradeFormState> {
       reflection: t.reflection ?? '',
       screenshotPath: null, // We have the URL, not the local path
       screenshotBytes: null,
+      screenshotUrl: t.screenshotUrl,
     );
   }
 }
@@ -467,7 +472,7 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         'take_profit': tp,
         'position_size': size,
         'risk_amount': risk,
-        'risk_pct': riskP,
+        'risk_pct': double.parse(riskP.toStringAsFixed(2)),
         'commission': comm,
         'entry_at': f.entryAt.toIso8601String(),
         'exit_at': f.exitAt.toIso8601String(),
@@ -492,7 +497,7 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         'rr_ok': f.checkRrOk,
         'confirmation': f.checkConfirmation,
         'screenshot_ready': f.checkScreenshot,
-        if (screenshotUrl != null) 'screenshot_url': screenshotUrl,
+        'screenshot_url': screenshotUrl ?? f.screenshotUrl,
       };
 
       if (widget.tradeId != null) {
