@@ -48,7 +48,7 @@ final currentBalanceProvider =
   return (
     initial: initial,
     current: current,
-    isBlown: current < 0 && initial > 0
+    isBlown: current <= 0 && initial > 0 && trades.isNotEmpty
   );
 });
 

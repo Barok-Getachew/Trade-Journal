@@ -497,7 +497,10 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         'rr_ok': f.checkRrOk,
         'confirmation': f.checkConfirmation,
         'screenshot_ready': f.checkScreenshot,
-        'screenshot_url': screenshotUrl ?? f.screenshotUrl,
+        'screenshot_url': () {
+          final url = screenshotUrl ?? f.screenshotUrl;
+          return (url == null || url.isEmpty) ? null : url;
+        }(),
       };
 
       if (widget.tradeId != null) {
@@ -1631,8 +1634,9 @@ class _Step6ReflectionState extends State<_Step6Reflection> {
       // ── Screenshot Upload ──────────────────────────────────────────────────
       _sectionTitle('Chart Screenshot  (optional)'),
       const SizedBox(height: 8),
-      if (f.screenshotBytes == null) ...[
-        // No image yet — show upload button
+      if (f.screenshotBytes == null &&
+          (f.screenshotUrl == null || f.screenshotUrl!.isEmpty)) ...[
+        // No image at all — show upload button
         OutlinedButton.icon(
           onPressed: _pickingFile ? null : _pickScreenshot,
           icon: _pickingFile
@@ -1659,7 +1663,7 @@ class _Step6ReflectionState extends State<_Step6Reflection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image header
+              // Image header with Change/Remove buttons
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1676,7 +1680,9 @@ class _Step6ReflectionState extends State<_Step6Reflection> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      f.screenshotPath ?? 'screenshot.png',
+                      f.screenshotBytes != null
+                          ? (f.screenshotPath ?? 'screenshot.png')
+                          : 'Existing chart screenshot',
                       style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
@@ -1684,11 +1690,30 @@ class _Step6ReflectionState extends State<_Step6Reflection> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  // Change button
+                  TextButton.icon(
+                    icon: _pickingFile
+                        ? const SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.swap_horiz_rounded, size: 14),
+                    label: Text(_pickingFile ? '…' : 'Change',
+                        style: const TextStyle(fontSize: 12)),
+                    onPressed: _pickingFile ? null : _pickScreenshot,
+                    style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4)),
+                  ),
+                  // Remove — clears both bytes AND url
                   IconButton(
                     icon: const Icon(Icons.close_rounded,
                         color: AppColors.textMuted, size: 18),
                     onPressed: () => n.update(f.copyWith(
-                        screenshotPath: null, screenshotBytes: null)),
+                        screenshotPath: null,
+                        screenshotBytes: null,
+                        screenshotUrl: '')),
                     tooltip: 'Remove screenshot',
                     padding: EdgeInsets.zero,
                     constraints:
@@ -1702,16 +1727,34 @@ class _Step6ReflectionState extends State<_Step6Reflection> {
                   bottomLeft: Radius.circular(AppSpacing.radiusMd),
                   bottomRight: Radius.circular(AppSpacing.radiusMd),
                 ),
-                child: Image.memory(
-                  f.screenshotBytes!,
-                  width: double.infinity,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('Preview not available',
-                        style: TextStyle(color: AppColors.textMuted)),
-                  ),
-                ),
+                child: f.screenshotBytes != null
+                    ? Image.memory(
+                        f.screenshotBytes!,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('Preview not available',
+                              style: TextStyle(color: AppColors.textMuted)),
+                        ),
+                      )
+                    : Image.network(
+                        f.screenshotUrl!,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (ctx, child, progress) {
+                          if (progress == null) return child;
+                          return const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('Could not load image',
+                              style: TextStyle(color: AppColors.textMuted)),
+                        ),
+                      ),
               ),
             ],
           ),

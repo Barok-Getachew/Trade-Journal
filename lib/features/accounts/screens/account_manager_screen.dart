@@ -184,7 +184,7 @@ class _AccountTile extends StatelessWidget {
 
   bool get _isBlown =>
       currentBalance != null &&
-      currentBalance! < 0 &&
+      currentBalance! <= 0 &&
       account.initialBalance > 0;
 
   @override
