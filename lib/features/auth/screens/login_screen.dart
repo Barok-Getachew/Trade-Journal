@@ -17,6 +17,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   String? _error;
@@ -41,11 +42,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     _animCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_isSignUp && _passwordCtrl.text != _confirmPasswordCtrl.text) {
+      setState(() => _error = 'Passwords do not match');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -200,8 +206,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   validator: (v) => v == null || v.length < 6
                                       ? 'Password must be at least 6 characters'
                                       : null,
-                                  onSubmitted: (_) => _submit(),
+                                  onSubmitted: _isSignUp ? null : (_) => _submit(),
                                 ),
+                                if (_isSignUp) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  _InputField(
+                                    controller: _confirmPasswordCtrl,
+                                    label: 'Confirm Password',
+                                    icon: Icons.lock_clock_outlined,
+                                    isPassword: true,
+                                    obscure: _obscure,
+                                    onToggleObscure: () => setState(() => _obscure = !_obscure),
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty) return 'Required';
+                                      if (v != _passwordCtrl.text) return 'Passwords do not match';
+                                      return null;
+                                    },
+                                    onSubmitted: (_) => _submit(),
+                                  ),
+                                ],
                                 if (_error != null) ...[
                                   const SizedBox(height: AppSpacing.md),
                                   _ErrorMessage(message: _error!),
