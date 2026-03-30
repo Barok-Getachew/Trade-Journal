@@ -5,6 +5,53 @@ import 'package:journal/domain/models/trade.dart';
 import 'package:journal/features/auth/providers/repository_providers.dart';
 import 'package:journal/features/accounts/providers/account_provider.dart';
 
+// ── Current balance per account (initialBalance + sum of all trade netPnl) ────
+
+/// Returns a map of accountId → currentBalance for every account.
+final accountCurrentBalancesProvider =
+    FutureProvider<Map<String, double>>((ref) async {
+  final accounts = await ref.watch(accountsProvider.future);
+  final allTrades = await ref.watch(allTradesProvider.future);
+
+  final Map<String, double> balances = {};
+  for (final account in accounts) {
+    final trades = allTrades.where((t) => t.accountId == account.id).toList();
+    final pnl = trades.fold<double>(0.0, (sum, t) => sum + t.netPnl);
+    balances[account.id] = account.initialBalance + pnl;
+  }
+  return balances;
+});
+
+/// Current balance & blown status for the selected account (or aggregate).
+final currentBalanceProvider =
+    FutureProvider<({double initial, double current, bool isBlown})>(
+        (ref) async {
+  final selectedAccount = ref.watch(selectedAccountProvider);
+  final allTrades = await ref.watch(allTradesProvider.future);
+  final accounts = await ref.watch(accountsProvider.future);
+
+  double initial;
+  List<Trade> trades;
+
+  if (selectedAccount != null) {
+    initial = selectedAccount.initialBalance;
+    trades = allTrades.where((t) => t.accountId == selectedAccount.id).toList();
+  } else {
+    initial = accounts.isEmpty
+        ? 0.0
+        : accounts.fold<double>(0, (s, a) => s + a.initialBalance);
+    trades = allTrades;
+  }
+
+  final pnl = trades.fold<double>(0.0, (sum, t) => sum + t.netPnl);
+  final current = initial + pnl;
+  return (
+    initial: initial,
+    current: current,
+    isBlown: current <= 0 && initial > 0
+  );
+});
+
 // ── All trades (no filter) ────────────────────────────────────────────────────
 
 final allTradesProvider = FutureProvider<List<Trade>>((ref) async {

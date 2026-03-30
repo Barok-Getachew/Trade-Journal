@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../domain/enums/account_type.dart';
 import '../../../domain/models/account.dart';
 import '../../../shared/widgets/cards/glass_card.dart';
 import '../../auth/providers/repository_providers.dart';
+import '../../dashboard/providers/dashboard_provider.dart';
 import '../providers/account_provider.dart';
 
 class AccountManagerScreen extends ConsumerWidget {
@@ -28,33 +30,37 @@ class AccountManagerScreen extends ConsumerWidget {
               error: (e, _) => Center(
                   child: Text('Error: $e',
                       style: const TextStyle(color: AppColors.loss))),
-              data: (accounts) => accounts.isEmpty
-                  ? const _EmptyState()
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      itemCount: accounts.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.sm),
-                      itemBuilder: (ctx, i) => _AccountTile(
-                        account: accounts[i],
-                        onEdit: () => _showAccountForm(ctx, ref, accounts[i]),
-                        onArchive: () async {
-                          await ref
-                              .read(accountRepositoryProvider)
-                              .archive(accounts[i].id);
-                          ref.invalidate(accountListProvider);
-                        },
-                        onDelete: () async {
-                          final confirm = await _confirmDelete(ctx);
-                          if (confirm == true) {
-                            await ref
-                                .read(accountRepositoryProvider)
-                                .delete(accounts[i].id);
-                            ref.invalidate(accountListProvider);
-                          }
-                        },
-                      ),
-                    ),
+              data: (accounts) {
+                if (accounts.isEmpty) return const _EmptyState();
+                final balancesAsync = ref.watch(accountCurrentBalancesProvider);
+                final balances = balancesAsync.value ?? {};
+                return ListView.separated(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  itemCount: accounts.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (ctx, i) => _AccountTile(
+                    account: accounts[i],
+                    currentBalance: balances[accounts[i].id],
+                    onEdit: () => _showAccountForm(ctx, ref, accounts[i]),
+                    onArchive: () async {
+                      await ref
+                          .read(accountRepositoryProvider)
+                          .archive(accounts[i].id);
+                      ref.invalidate(accountListProvider);
+                    },
+                    onDelete: () async {
+                      final confirm = await _confirmDelete(ctx);
+                      if (confirm == true) {
+                        await ref
+                            .read(accountRepositoryProvider)
+                            .delete(accounts[i].id);
+                        ref.invalidate(accountListProvider);
+                      }
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -164,15 +170,22 @@ class _EmptyState extends StatelessWidget {
 
 class _AccountTile extends StatelessWidget {
   final Account account;
+  final double? currentBalance;
   final VoidCallback onEdit;
   final VoidCallback onArchive;
   final VoidCallback onDelete;
   const _AccountTile({
     required this.account,
+    this.currentBalance,
     required this.onEdit,
     required this.onArchive,
     required this.onDelete,
   });
+
+  bool get _isBlown =>
+      currentBalance != null &&
+      currentBalance! <= 0 &&
+      account.initialBalance > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -207,14 +220,50 @@ class _AccountTile extends StatelessWidget {
                         fontSize: 15)),
                 const SizedBox(width: 8),
                 _badge(account.accountType.badgeLabel, typeColor),
+                if (_isBlown) ...[
+                  const SizedBox(width: 6),
+                  _badge('BLOWN', AppColors.loss),
+                ],
               ]),
               const SizedBox(height: 4),
               Text(
                 '${account.broker ?? 'No broker'} · ${account.currency} · '
-                '${account.initialBalance.toStringAsFixed(0)} · 1:${account.leverage}',
+                '1:${account.leverage}',
                 style: const TextStyle(
                     color: AppColors.textSecondary, fontSize: 12),
               ),
+              const SizedBox(height: 2),
+              // Current balance row
+              Row(children: [
+                Text(
+                  'Balance: ',
+                  style:
+                      const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                ),
+                Text(
+                  currentBalance != null
+                      ? Fmt.currency(currentBalance!)
+                      : Fmt.currency(account.initialBalance),
+                  style: TextStyle(
+                    color: _isBlown
+                        ? AppColors.loss
+                        : (currentBalance != null &&
+                                currentBalance! > account.initialBalance
+                            ? AppColors.profit
+                            : AppColors.textSecondary),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (currentBalance != null) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '(start: ${Fmt.currency(account.initialBalance)})',
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 10),
+                  ),
+                ],
+              ]),
             ],
           ),
         ),

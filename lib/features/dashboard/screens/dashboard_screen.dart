@@ -28,6 +28,7 @@ class DashboardScreen extends ConsumerWidget {
     final alertsAsync = ref.watch(dashboardAlertsProvider);
     final startBalanceAsync = ref.watch(startingBalanceProvider);
     final startBalance = startBalanceAsync.value ?? 10000.0;
+    final balanceAsync = ref.watch(currentBalanceProvider);
     final checklist = ref.watch(premarketChecklistProvider);
     final isMobile = MediaQuery.of(context).size.width < _kMobileBreak;
 
@@ -39,6 +40,13 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             // ── Pre-Market Checklist ────────────────────────────────────────
             _PremarketChecklistCard(state: checklist),
+            const SizedBox(height: AppSpacing.md),
+            // ── Balance Summary Card ───────────────────────────────────────────
+            balanceAsync.when(
+              data: (bal) => _BalanceSummaryCard(bal: bal),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
             const SizedBox(height: AppSpacing.md),
             const WeeklySummaryCard(),
             const SizedBox(height: AppSpacing.md),
@@ -1106,4 +1114,205 @@ Widget _streakBanner(PortfolioStats stats) {
       ],
     ),
   );
+}
+
+// ── Balance Summary Card ───────────────────────────────────────────────────────
+
+class _BalanceSummaryCard extends StatelessWidget {
+  final ({double initial, double current, bool isBlown}) bal;
+  const _BalanceSummaryCard({required this.bal});
+
+  @override
+  Widget build(BuildContext context) {
+    // If blown — show a full-width critical banner instead of the card
+    if (bal.isBlown) {
+      return _BlownAccountBanner(initial: bal.initial);
+    }
+
+    final change = bal.current - bal.initial;
+    final pctChange = bal.initial > 0 ? (change / bal.initial) * 100 : 0.0;
+    final isGain = change >= 0;
+    final changeColor = isGain ? AppColors.profit : AppColors.loss;
+    final changeBg = isGain ? AppColors.profitDim : AppColors.lossDim;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withValues(alpha: 0.12),
+            AppColors.primary.withValues(alpha: 0.04),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Icon
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_rounded,
+              color: AppColors.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          // Current balance
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'CURRENT BALANCE',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  Fmt.currency(bal.current),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Starting: ${Fmt.currency(bal.initial)}',
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Change badge
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: changeBg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isGain
+                          ? Icons.trending_up_rounded
+                          : Icons.trending_down_rounded,
+                      color: changeColor,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${isGain ? '+' : ''}${Fmt.currency(change)}',
+                      style: TextStyle(
+                        color: changeColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${isGain ? '+' : ''}${pctChange.toStringAsFixed(2)}%',
+                style: TextStyle(
+                  color: changeColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Blown Account Banner ───────────────────────────────────────────────────────
+
+class _BlownAccountBanner extends StatelessWidget {
+  final double initial;
+  const _BlownAccountBanner({required this.initial});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.loss.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: AppColors.loss.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.loss.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.warning_rounded,
+              color: AppColors.loss,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '⚠️ ACCOUNT BLOWN',
+                  style: TextStyle(
+                    color: AppColors.loss,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Balance has dropped to \$0 or below from a starting balance of ${Fmt.currency(initial)}. '
+                  'Stop trading, review your risk management, and consider resetting this account.',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
