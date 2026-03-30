@@ -19,6 +19,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   bool _loading = false;
   String? _error;
   bool _obscure = true;
+  bool _isSignUp = false;
   late AnimationController _animCtrl;
   late Animation<double> _fade;
 
@@ -41,17 +42,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     super.dispose();
   }
 
-  Future<void> _signIn() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text,
-      );
+      if (_isSignUp) {
+        await Supabase.instance.client.auth.signUp(
+          email: _emailCtrl.text.trim(),
+          password: _passwordCtrl.text,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Verification email sent! Please check your inbox.'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+          setState(() => _isSignUp = false);
+        }
+      } else {
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: _emailCtrl.text.trim(),
+          password: _passwordCtrl.text,
+        );
+      }
     } on AuthException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -116,7 +133,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Your personal trading performance lab',
+                      _isSignUp
+                          ? 'Create your free account to start journaling'
+                          : 'Your personal trading performance lab',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
@@ -156,9 +175,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Enter your password' : null,
-                      onFieldSubmitted: (_) => _signIn(),
+                      validator: (v) => v == null || v.length < 6
+                          ? 'Password must be at least 6 characters'
+                          : null,
+                      onFieldSubmitted: (_) => _submit(),
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: AppSpacing.md),
@@ -186,7 +206,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     SizedBox(
                       height: 48,
                       child: ElevatedButton(
-                        onPressed: _loading ? null : _signIn,
+                        onPressed: _loading ? null : _submit,
                         child: _loading
                             ? const SizedBox(
                                 width: 20,
@@ -196,14 +216,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Sign In'),
+                            : Text(_isSignUp ? 'Sign Up' : 'Sign In'),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Personal use only. Sign up via Supabase dashboard.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _isSignUp
+                              ? 'Already have an account?'
+                              : "Don't have an account?",
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              setState(() => _isSignUp = !_isSignUp),
+                          child: Text(_isSignUp ? 'Sign In' : 'Sign Up'),
+                        ),
+                      ],
                     ),
                   ],
                 ),

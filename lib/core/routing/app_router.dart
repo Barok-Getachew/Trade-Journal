@@ -17,26 +17,51 @@ import '../../features/accounts/screens/account_comparison_screen.dart';
 import '../../features/daily_review/screens/daily_review_screen.dart';
 import '../../features/risk_rules/screens/risk_rules_screen.dart';
 import '../../shared/widgets/layout/app_shell.dart';
+import '../../features/auth/screens/onboarding_screen.dart';
+import '../../features/accounts/providers/account_provider.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final notifier = ValueNotifier<bool>(false);
+  final refreshNotifier = ValueNotifier<int>(0);
 
-  ref.listen(authStateProvider, (_, next) {
-    notifier.value = next.valueOrNull?.session != null;
-  });
+  ref.listen(authStateProvider, (_, __) => refreshNotifier.value++);
+  ref.listen(accountListProvider, (_, __) => refreshNotifier.value++);
 
   return GoRouter(
-    refreshListenable: notifier,
+    refreshListenable: refreshNotifier,
     initialLocation: '/dashboard',
     redirect: (context, state) {
-      final isLoggedIn = notifier.value;
+      final auth = ref.read(authStateProvider).valueOrNull;
+      final isLoggedIn = auth?.session != null;
+      final accounts = ref.read(accountListProvider).valueOrNull;
+
       final isLoggingIn = state.matchedLocation == '/login';
-      if (!isLoggedIn && !isLoggingIn) return '/login';
-      if (isLoggedIn && isLoggingIn) return '/dashboard';
+      final isOnboarding = state.matchedLocation == '/onboarding';
+
+      if (!isLoggedIn) {
+        return isLoggingIn ? null : '/login';
+      }
+
+      // Logged in
+      if (isLoggingIn) return '/dashboard';
+
+      // If we have accounts info and it's empty, and we aren't already onboarding
+      if (accounts != null && accounts.isEmpty && !isOnboarding) {
+        return '/onboarding';
+      }
+
+      // If we have accounts and we are on onboarding, go to dashboard
+      if (accounts != null && accounts.isNotEmpty && isOnboarding) {
+        return '/dashboard';
+      }
+
       return null;
     },
     routes: [
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(
+        path: '/onboarding',
+        builder: (_, __) => const OnboardingScreen(),
+      ),
       ShellRoute(
         builder: (_, __, child) => AppShell(child: child),
         routes: [
