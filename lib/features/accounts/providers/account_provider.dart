@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/models/account.dart';
 import '../../auth/providers/repository_providers.dart';
+import '../../auth/providers/auth_provider.dart';
 
 // ── Account list (active accounts for current user) ───────────────────────────
 
 final accountListProvider = FutureProvider<List<Account>>((ref) async {
+  final authState = ref.watch(authStateProvider).valueOrNull;
+  if (authState?.session == null) return [];
   return ref.watch(accountRepositoryProvider).fetchAll();
 });
 
