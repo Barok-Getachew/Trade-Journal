@@ -17,6 +17,7 @@ import '../../../domain/enums/direction.dart';
 import '../../../domain/enums/emotion_type.dart';
 import '../../../domain/enums/market_condition.dart';
 import '../../../domain/enums/session.dart';
+import '../../../domain/models/trade.dart';
 import '../../accounts/providers/account_provider.dart';
 import '../../auth/providers/repository_providers.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
@@ -185,6 +186,45 @@ class TradeFormNotifier extends StateNotifier<TradeFormState> {
   void update(TradeFormState s) => state = s;
   void next() => state = state.copyWith(step: state.step + 1);
   void prev() => state = state.copyWith(step: state.step - 1);
+
+  void initFromTrade(Trade t, {required int step}) {
+    state = TradeFormState(
+      step: step,
+      checkPlanMatch: t.planMatch,
+      checkRiskOk: t.riskOk,
+      checkRrOk: t.rrOk,
+      checkConfirmation: t.confirmation,
+      checkScreenshot: t.screenshotReady,
+      accountId: t.accountId,
+      symbol: t.symbol,
+      assetClass: t.assetClass,
+      direction: t.direction,
+      entryPrice: t.entryPrice.toString(),
+      exitPrice: t.exitPrice.toString(),
+      stopLoss: t.stopLoss?.toString() ?? '',
+      takeProfit: t.takeProfit?.toString() ?? '',
+      positionSize: t.positionSize.toString(),
+      commission: t.commission.toString(),
+      entryAt: t.entryAt,
+      exitAt: t.exitAt,
+      riskAmount: t.riskAmount.toString(),
+      riskPct: t.riskPct.toString(),
+      strategyId: t.strategyId,
+      marketCondition: t.marketCondition,
+      session: t.session,
+      newsDay: t.newsDay,
+      setupQuality: t.setupQuality,
+      emotionBefore: t.emotionBefore,
+      emotionAfter: t.emotionAfter,
+      confidence: t.confidence,
+      rulesFollowed: t.rulesFollowed,
+      isImpulse: t.isImpulse,
+      mistakeType: t.mistakeType,
+      reflection: t.reflection ?? '',
+      screenshotPath: null, // We have the URL, not the local path
+      screenshotBytes: null,
+    );
+  }
 }
 
 final tradeFormProvider =
@@ -272,6 +312,26 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
   ];
   final _formKeys = List.generate(7, (_) => GlobalKey<FormState>());
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.tradeId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadTrade());
+    }
+  }
+
+  Future<void> _loadTrade() async {
+    try {
+      final trade =
+          await ref.read(tradeRepositoryProvider).fetchById(widget.tradeId!);
+      if (trade != null && mounted) {
+        ref.read(tradeFormProvider.notifier).initFromTrade(trade, step: 0);
+      }
+    } catch (e) {
+      debugPrint('Error loading trade: $e');
+    }
+  }
 
   bool _validateStep(int step) =>
       _formKeys[step].currentState?.validate() ?? false;
