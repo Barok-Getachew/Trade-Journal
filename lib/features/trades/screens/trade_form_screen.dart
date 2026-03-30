@@ -472,7 +472,7 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         'take_profit': tp,
         'position_size': size,
         'risk_amount': risk,
-        'risk_pct': double.parse(riskP.toStringAsFixed(2)),
+        'risk_pct': double.parse(riskP.clamp(0, 99.9999).toStringAsFixed(4)),
         'commission': comm,
         'entry_at': f.entryAt.toIso8601String(),
         'exit_at': f.exitAt.toIso8601String(),
