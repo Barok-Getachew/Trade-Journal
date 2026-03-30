@@ -111907,37 +111907,40 @@ q=r.y
 q.S$=s
 q.J$=0
 r.ahc()},
-qI(){var s=0,r=A.y(t.H),q,p=2,o=[],n=[],m=this,l,k,j,i,h,g
+qI(){var s=0,r=A.y(t.H),q,p=2,o=[],n=[],m=this,l,k,j,i,h,g,f
 var $async$qI=A.u(function(a,b){if(a===1){o.push(b)
 s=p}while(true)switch(s){case 0:if(!m.z.gR().jI()){s=1
 break}if(m.ax&&m.x.a.a!==m.y.a.a){m.M(new A.aOM(m))
 s=1
 break}m.M(new A.aON(m))
 p=4
-k=m.w
-j=m.x
+j=m.w
+i=m.x
 s=m.ax?7:9
 break
-case 7:i=$.iS().b
-i===$&&A.a()
+case 7:h=$.iS().b
+h===$&&A.a()
 s=10
-return A.r(i.ge1().xh(B.c.cZ(k.a.a),"https://trading-journal-v1-a128d4f5494a.herokuapp.com/",j.a.a),$async$qI)
-case 10:k=m.c
-if(k!=null){k.a6(t.J).f.h4(B.a2O)
+return A.r(h.ge1().xh(B.c.cZ(j.a.a),"https://trading-journal-v1-a128d4f5494a.herokuapp.com/",i.a.a),$async$qI)
+case 10:l=b
+j=m.c
+if(j!=null){if(l.a!=null){n=[1]
+s=5
+break}j.a6(t.J).f.h4(B.a2O)
 m.M(new A.aOO(m))}s=8
 break
-case 9:i=$.iS().b
-i===$&&A.a()
+case 9:h=$.iS().b
+h===$&&A.a()
 s=11
-return A.r(i.ge1().Cw(B.c.cZ(k.a.a),j.a.a),$async$qI)
+return A.r(h.ge1().Cw(B.c.cZ(j.a.a),i.a.a),$async$qI)
 case 11:case 8:n.push(6)
 s=5
 break
 case 4:p=3
-g=o.pop()
-k=A.ac(g)
-if(k instanceof A.ls){l=k
-m.M(new A.aOP(m,l))}else throw g
+f=o.pop()
+j=A.ac(f)
+if(j instanceof A.ls){k=j
+m.M(new A.aOP(m,k))}else throw f
 n.push(6)
 s=5
 break

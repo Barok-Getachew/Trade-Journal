@@ -58,15 +58,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     });
     try {
       if (_isSignUp) {
-        await Supabase.instance.client.auth.signUp(
+        final res = await Supabase.instance.client.auth.signUp(
           email: _emailCtrl.text.trim(),
           password: _passwordCtrl.text,
           emailRedirectTo: SupabaseConfig.prodUrl,
         );
         if (mounted) {
+          if (res.session != null) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Verification email sent! Please check your inbox.'),
+              content:
+                  Text('Verification email sent! Please check your inbox.'),
               backgroundColor: AppColors.primary,
             ),
           );
