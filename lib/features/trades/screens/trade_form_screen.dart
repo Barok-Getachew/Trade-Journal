@@ -63,6 +63,7 @@ class TradeFormState {
   final String? screenshotPath; // local file path (desktop)
   final Uint8List? screenshotBytes; // picked bytes (web/preview)
   final String? screenshotUrl; // remote URL (persisted)
+  final String manualNetPnl; // override broker P&L (empty = auto-calculate)
 
   TradeFormState({
     this.step = 0,
@@ -100,6 +101,7 @@ class TradeFormState {
     this.screenshotPath,
     this.screenshotBytes,
     this.screenshotUrl,
+    this.manualNetPnl = '',
   })  : entryAt = entryAt ?? DateTime.now(),
         exitAt = exitAt ?? DateTime.now();
 
@@ -139,6 +141,7 @@ class TradeFormState {
     Object? screenshotPath = _sentinel,
     Object? screenshotBytes = _sentinel,
     String? screenshotUrl,
+    String? manualNetPnl,
   }) {
     return TradeFormState(
         step: step ?? this.step,
@@ -179,7 +182,8 @@ class TradeFormState {
         screenshotBytes: identical(screenshotBytes, _sentinel)
             ? this.screenshotBytes
             : screenshotBytes as Uint8List?,
-        screenshotUrl: screenshotUrl ?? this.screenshotUrl);
+        screenshotUrl: screenshotUrl ?? this.screenshotUrl,
+        manualNetPnl: manualNetPnl ?? this.manualNetPnl);
   }
 }
 
@@ -228,6 +232,7 @@ class TradeFormNotifier extends StateNotifier<TradeFormState> {
       screenshotPath: null, // We have the URL, not the local path
       screenshotBytes: null,
       screenshotUrl: t.screenshotUrl,
+      manualNetPnl: '', // don't pre-fill; let user decide if they want to override
     );
   }
 }
@@ -272,11 +277,12 @@ Widget _numField({
   required void Function(String) onChanged,
   String? initialValue,
   String? prefixText,
+  bool signed = false,
 }) =>
     TextFormField(
       initialValue: initialValue,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+      keyboardType: TextInputType.numberWithOptions(decimal: true, signed: signed),
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(signed ? r'[0-9.-]' : r'[0-9.]'))],
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -371,7 +377,10 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         positionSize: size,
         isLong: f.direction == TradeDirection.long,
       );
-      final net = TradeAnalytics.netPnl(gross, comm);
+      // If user provided a manual net P&L (e.g. from broker statement for
+      // non-standard contracts like XAUUSDm), use that instead of the formula.
+      final manualNet = double.tryParse(f.manualNetPnl.trim());
+      final net = manualNet ?? TradeAnalytics.netPnl(gross, comm);
       final rm = risk > 0 ? TradeAnalytics.rMultiple(net, risk) : 0.0;
 
       final accounts = await ref.read(accountRepositoryProvider).fetchAll();
@@ -478,7 +487,7 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         'exit_at': f.exitAt.toIso8601String(),
         'balance_at_entry':
             accounts.isNotEmpty ? accounts.first.initialBalance : 10000.0,
-        'gross_pnl': gross,
+        'gross_pnl': manualNet != null ? manualNet + comm : gross,
         'net_pnl': net,
         'r_multiple': rm,
         'market_condition': f.marketCondition?.name,
@@ -1391,6 +1400,25 @@ class _Step3Risk extends StatelessWidget {
             },
             onChanged: (v) => n.update(f.copyWith(riskPct: v))),
       ),
+      _gap(),
+      _sectionTitle('Broker P&L Override (Optional)'),
+      const Text(
+        'Use this if your broker\'s actual P&L differs from our calculated one (common for micro contracts like XAUUSDm).',
+        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+      ),
+      const SizedBox(height: 8),
+      _numField(
+          label: 'Actual Net P&L (from Broker)',
+          hint: '-29.87',
+          prefixText: '\$ ',
+          signed: true,
+          initialValue: f.manualNetPnl,
+          validator: (v) {
+            if (v == null || v.trim().isEmpty) return null;
+            if (double.tryParse(v) == null) return 'Invalid';
+            return null;
+          },
+          onChanged: (v) => n.update(f.copyWith(manualNetPnl: v))),
       _gap(),
       Container(
         padding: const EdgeInsets.all(AppSpacing.md),
