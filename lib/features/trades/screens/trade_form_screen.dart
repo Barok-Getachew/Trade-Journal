@@ -371,7 +371,11 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
       final riskP = double.tryParse(f.riskPct) ?? 0;
       final sl = double.tryParse(f.stopLoss);
       final tp = double.tryParse(f.takeProfit);
-      final multiplier = CurrencyPairs.getContractSize(f.symbol);
+      final accounts = ref.read(accountListProvider).valueOrNull ?? [];
+      final account = accounts.firstWhere((a) => a.id == f.accountId,
+          orElse: () => accounts.first);
+      final multiplier =
+          CurrencyPairs.getContractSize(f.symbol) * (account.lotSize / 100000.0);
       final gross = TradeAnalytics.grossPnl(
         entryPrice: ep,
         exitPrice: xp,
@@ -385,9 +389,9 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
       final net = manualNet ?? TradeAnalytics.netPnl(gross, comm);
       final rm = risk > 0 ? TradeAnalytics.rMultiple(net, risk) : 0.0;
 
-      final accounts = await ref.read(accountRepositoryProvider).fetchAll();
+      final repoAccounts = await ref.read(accountRepositoryProvider).fetchAll();
       final accountId =
-          f.accountId ?? (accounts.isNotEmpty ? accounts.first.id : '');
+          f.accountId ?? (repoAccounts.isNotEmpty ? repoAccounts.first.id : '');
 
       // ── Risk Rules Validation ──────────────────────────────────────────────
       final rules =
@@ -488,7 +492,7 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         'entry_at': f.entryAt.toIso8601String(),
         'exit_at': f.exitAt.toIso8601String(),
         'balance_at_entry':
-            accounts.isNotEmpty ? accounts.first.initialBalance : 10000.0,
+            repoAccounts.isNotEmpty ? repoAccounts.first.initialBalance : 10000.0,
         'gross_pnl': manualNet != null ? manualNet + comm : gross,
         'net_pnl': net,
         'r_multiple': rm,
@@ -1369,16 +1373,22 @@ class _Step2Prices extends StatelessWidget {
   }
 }
 
-class _LivePnlPreview extends StatelessWidget {
+class _LivePnlPreview extends ConsumerWidget {
   final TradeFormState form;
   const _LivePnlPreview({required this.form});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accounts = ref.watch(accountListProvider).valueOrNull ?? [];
+    final account = accounts.where((a) => a.id == form.accountId).firstOrNull ??
+        (accounts.isNotEmpty ? accounts.first : null);
+    final accountMultiplier = (account?.lotSize ?? 100000.0) / 100000.0;
+
     final ep = double.tryParse(form.entryPrice);
     final xp = double.tryParse(form.exitPrice);
     final size = double.tryParse(form.positionSize);
-    final multiplier = CurrencyPairs.getContractSize(form.symbol);
+    final symbolMultiplier = CurrencyPairs.getContractSize(form.symbol);
+    final totalMultiplier = symbolMultiplier * accountMultiplier;
 
     if (ep == null || xp == null || size == null) {
       return const SizedBox.shrink();
@@ -1389,7 +1399,7 @@ class _LivePnlPreview extends StatelessWidget {
       exitPrice: xp,
       positionSize: size,
       isLong: form.direction == TradeDirection.long,
-      contractSize: multiplier,
+      contractSize: totalMultiplier,
     );
     final comm = double.tryParse(form.commission) ?? 0;
     final net = TradeAnalytics.netPnl(gross, comm);
@@ -1411,7 +1421,7 @@ class _LivePnlPreview extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Estimated P&L (${multiplier.toStringAsFixed(0)}x multiplier)',
+                'Estimated P&L (${totalMultiplier.toStringAsFixed(0)}x multiplier)',
                 style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 12,

@@ -9,6 +9,7 @@ class Account {
   final double initialBalance;
   final AccountType accountType;
   final int leverage;
+  final double lotSize; // standard = 100,000, mini = 10,000, micro = 1,000
   final double? targetBalance;
   final double? monthlyRTarget;
   final bool isArchived;
@@ -23,6 +24,7 @@ class Account {
     required this.initialBalance,
     this.accountType = AccountType.live,
     this.leverage = 1,
+    this.lotSize = 100000.0,
     this.targetBalance,
     this.monthlyRTarget,
     this.isArchived = false,
@@ -39,6 +41,7 @@ class Account {
         accountType:
             AccountType.fromString(map['account_type'] as String? ?? 'live'),
         leverage: map['leverage'] as int? ?? 1,
+        lotSize: (map['lot_size'] as num? ?? 100000.0).toDouble(),
         targetBalance: map['target_balance'] != null
             ? (map['target_balance'] as num).toDouble()
             : null,
@@ -57,6 +60,7 @@ class Account {
         'initial_balance': initialBalance,
         'account_type': accountType.name,
         'leverage': leverage,
+        'lot_size': lotSize,
         'target_balance': targetBalance,
         'monthly_r_target': monthlyRTarget,
         'is_archived': isArchived,
@@ -85,6 +89,7 @@ class Account {
         initialBalance: initialBalance ?? this.initialBalance,
         accountType: accountType ?? this.accountType,
         leverage: leverage ?? this.leverage,
+        lotSize: lotSize ?? this.lotSize,
         targetBalance: targetBalance ?? this.targetBalance,
         monthlyRTarget: monthlyRTarget ?? this.monthlyRTarget,
         isArchived: isArchived ?? this.isArchived,

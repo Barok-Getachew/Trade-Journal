@@ -19,6 +19,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
   final _brokerCtrl = TextEditingController();
   final _balanceCtrl = TextEditingController(text: '10,000');
   final _formKey = GlobalKey<FormState>();
+  double _lotSize = 100000.0;
   bool _loading = false;
   late AnimationController _animCtrl;
   late Animation<double> _fade;
@@ -52,6 +53,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         'broker': _brokerCtrl.text.trim(),
         'initial_balance': double.parse(rawBalance),
         'currency': 'USD',
+        'lot_size': _lotSize,
       });
       if (mounted) context.go('/dashboard');
     } catch (e) {
@@ -172,9 +174,52 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                                     return 'Invalid number';
                                   }
                                   return null;
-                                },
-                              ),
-                              const SizedBox(height: AppSpacing.xl),
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                DropdownButtonFormField<double>(
+                                  value: _lotSize,
+                                  dropdownColor: AppColors.surfaceElevated,
+                                  style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 15),
+                                  decoration: InputDecoration(
+                                    labelText: 'Account / Lot Size',
+                                    prefixIcon: const Icon(
+                                        Icons.layers_outlined,
+                                        size: 20,
+                                        color: AppColors.textSecondary),
+                                    filled: true,
+                                    fillColor: Colors.white.withOpacity(0.04),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                          color: Colors.white.withOpacity(0.1)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                          color: AppColors.primary, width: 1.5),
+                                    ),
+                                  ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 100000.0,
+                                      child: Text('Standard (1 Lot = 100k)'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 10000.0,
+                                      child: Text('Mini (1 Lot = 10k)'),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 1000.0,
+                                      child: Text('Micro (1 Lot = 1k)'),
+                                    ),
+                                  ],
+                                  onChanged: (v) =>
+                                      setState(() => _lotSize = v!),
+                                ),
+                                const SizedBox(height: AppSpacing.xl),
                               SizedBox(
                                 height: 56,
                                 child: ElevatedButton(
