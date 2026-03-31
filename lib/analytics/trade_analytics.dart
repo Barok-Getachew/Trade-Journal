@@ -152,9 +152,10 @@ class TradeAnalytics {
     required double exitPrice,
     required double positionSize,
     required bool isLong,
+    double contractSize = 1.0,
   }) {
     final priceDelta = isLong ? exitPrice - entryPrice : entryPrice - exitPrice;
-    return priceDelta * positionSize;
+    return priceDelta * positionSize * contractSize;
   }
 
   /// Net PnL = grossPnl - commission.

@@ -371,11 +371,13 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
       final riskP = double.tryParse(f.riskPct) ?? 0;
       final sl = double.tryParse(f.stopLoss);
       final tp = double.tryParse(f.takeProfit);
+      final multiplier = CurrencyPairs.getContractSize(f.symbol);
       final gross = TradeAnalytics.grossPnl(
         entryPrice: ep,
         exitPrice: xp,
         positionSize: size,
         isLong: f.direction == TradeDirection.long,
+        contractSize: multiplier,
       );
       // If user provided a manual net P&L (e.g. from broker statement for
       // non-standard contracts like XAUUSDm), use that instead of the formula.
@@ -1361,7 +1363,81 @@ class _Step2Prices extends StatelessWidget {
             validator: _optNum,
             onChanged: (v) => n.update(f.copyWith(takeProfit: v))),
       ),
+      _gap(),
+      _LivePnlPreview(form: f),
     ]);
+  }
+}
+
+class _LivePnlPreview extends StatelessWidget {
+  final TradeFormState form;
+  const _LivePnlPreview({required this.form});
+
+  @override
+  Widget build(BuildContext context) {
+    final ep = double.tryParse(form.entryPrice);
+    final xp = double.tryParse(form.exitPrice);
+    final size = double.tryParse(form.positionSize);
+    final multiplier = CurrencyPairs.getContractSize(form.symbol);
+
+    if (ep == null || xp == null || size == null) {
+      return const SizedBox.shrink();
+    }
+
+    final gross = TradeAnalytics.grossPnl(
+      entryPrice: ep,
+      exitPrice: xp,
+      positionSize: size,
+      isLong: form.direction == TradeDirection.long,
+      contractSize: multiplier,
+    );
+    final comm = double.tryParse(form.commission) ?? 0;
+    final net = TradeAnalytics.netPnl(gross, comm);
+    final isProfit = net >= 0;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: (isProfit ? AppColors.profit : AppColors.loss).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: (isProfit ? AppColors.profit : AppColors.loss).withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Estimated P&L (${multiplier.toStringAsFixed(0)}x multiplier)',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${isProfit ? "+" : ""}${net.toStringAsFixed(2)} USD',
+                style: TextStyle(
+                  color: isProfit ? AppColors.profit : AppColors.loss,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          Icon(
+            isProfit
+                ? Icons.trending_up_rounded
+                : Icons.trending_down_rounded,
+            color: isProfit ? AppColors.profit : AppColors.loss,
+            size: 32,
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1419,6 +1495,8 @@ class _Step3Risk extends StatelessWidget {
             return null;
           },
           onChanged: (v) => n.update(f.copyWith(manualNetPnl: v))),
+      _gap(10),
+      _LivePnlPreview(form: f),
       _gap(),
       Container(
         padding: const EdgeInsets.all(AppSpacing.md),

@@ -117,4 +117,18 @@ class CurrencyPairs {
     }
     return 'forex';
   }
+
+  /// Standard contract sizes for common instruments.
+  static double getContractSize(String symbol) {
+    final sym = symbol.toUpperCase();
+    final cat = categoryFor(sym);
+
+    if (cat.contains('Forex')) return 100000.0; // Standard Lot
+    if (sym.startsWith('XAU')) return 100.0; // Gold (1 lot = 100 oz)
+    if (sym.startsWith('XAG')) return 5000.0; // Silver (1 lot = 5000 oz)
+    if (cat == 'Indices') return 1.0; // Often 1 or 10, but 1 is safer default
+    if (cat == 'Crypto') return 1.0;
+
+    return 1.0;
+  }
 }
