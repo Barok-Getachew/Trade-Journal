@@ -232,7 +232,8 @@ class TradeFormNotifier extends StateNotifier<TradeFormState> {
       screenshotPath: null, // We have the URL, not the local path
       screenshotBytes: null,
       screenshotUrl: t.screenshotUrl,
-      manualNetPnl: '', // don't pre-fill; let user decide if they want to override
+      manualNetPnl:
+          '', // don't pre-fill; let user decide if they want to override
     );
   }
 }
@@ -281,8 +282,12 @@ Widget _numField({
 }) =>
     TextFormField(
       initialValue: initialValue,
-      keyboardType: TextInputType.numberWithOptions(decimal: true, signed: signed),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(signed ? r'[0-9.-]' : r'[0-9.]'))],
+      keyboardType:
+          TextInputType.numberWithOptions(decimal: true, signed: signed),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(
+            RegExp(signed ? r'[0-9.-]' : r'[0-9.]'))
+      ],
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -329,6 +334,18 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
     super.initState();
     if (widget.tradeId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadTrade());
+    } else {
+      // Pre-select current account from dashboard if available
+      final initialAccountId = ref.read(selectedAccountIdProvider);
+      if (initialAccountId != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(tradeFormProvider.notifier).update(
+                ref
+                    .read(tradeFormProvider)
+                    .copyWith(accountId: initialAccountId),
+              );
+        });
+      }
     }
   }
 
@@ -374,8 +391,8 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
       final accounts = ref.read(accountListProvider).valueOrNull ?? [];
       final account = accounts.firstWhere((a) => a.id == f.accountId,
           orElse: () => accounts.first);
-      final multiplier =
-          CurrencyPairs.getContractSize(f.symbol) * (account.lotSize / 100000.0);
+      final multiplier = CurrencyPairs.getContractSize(f.symbol) *
+          (account.lotSize / 100000.0);
       final gross = TradeAnalytics.grossPnl(
         entryPrice: ep,
         exitPrice: xp,
@@ -491,8 +508,9 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         'commission': comm,
         'entry_at': f.entryAt.toIso8601String(),
         'exit_at': f.exitAt.toIso8601String(),
-        'balance_at_entry':
-            repoAccounts.isNotEmpty ? repoAccounts.first.initialBalance : 10000.0,
+        'balance_at_entry': repoAccounts.isNotEmpty
+            ? repoAccounts.first.initialBalance
+            : 10000.0,
         'gross_pnl': manualNet != null ? manualNet + comm : gross,
         'net_pnl': net,
         'r_multiple': rm,
@@ -523,9 +541,15 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
       } else {
         await ref.read(tradeRepositoryProvider).insert(data);
       }
-      // Invalidate both providers so the list and dashboard refresh immediately
-      ref.invalidate(filteredTradesProvider);
+      // Invalidate all related providers so the dashboard updates immediately
       ref.invalidate(allTradesProvider);
+      ref.invalidate(filteredTradesProvider);
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(currentBalanceProvider);
+      ref.invalidate(accountCurrentBalancesProvider);
+      ref.invalidate(recentTradesProvider);
+      ref.invalidate(monthlyRTargetProvider);
+      ref.invalidate(bestWorstTradesProvider);
       if (mounted) context.go('/trades');
     } catch (e) {
       debugPrint('Save Error: $e');
@@ -1158,7 +1182,10 @@ class _Step1Symbol extends ConsumerWidget {
         _sectionTitle('Trading Account'),
         accountsAsync.when(
           data: (list) => DropdownButtonFormField<String>(
-            value: form.accountId ?? (list.isNotEmpty ? list.first.id : null),
+            // We MUST ensure the value exists in the list or is null
+            value: list.any((a) => a.id == form.accountId)
+                ? form.accountId
+                : (list.isNotEmpty ? list.first.id : null),
             decoration: const InputDecoration(hintText: 'Select Account'),
             items: list
                 .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
@@ -1411,7 +1438,8 @@ class _LivePnlPreview extends ConsumerWidget {
         color: (isProfit ? AppColors.profit : AppColors.loss).withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(
-          color: (isProfit ? AppColors.profit : AppColors.loss).withOpacity(0.3),
+          color:
+              (isProfit ? AppColors.profit : AppColors.loss).withOpacity(0.3),
         ),
       ),
       child: Row(
@@ -1439,9 +1467,7 @@ class _LivePnlPreview extends ConsumerWidget {
             ],
           ),
           Icon(
-            isProfit
-                ? Icons.trending_up_rounded
-                : Icons.trending_down_rounded,
+            isProfit ? Icons.trending_up_rounded : Icons.trending_down_rounded,
             color: isProfit ? AppColors.profit : AppColors.loss,
             size: 32,
           ),

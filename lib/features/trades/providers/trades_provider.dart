@@ -80,17 +80,15 @@ class TradeFilterNotifier extends StateNotifier<TradeFilter> {
 
 final tradeFilterProvider =
     StateNotifierProvider<TradeFilterNotifier, TradeFilter>(
-      (_) => TradeFilterNotifier(),
-    );
+  (_) => TradeFilterNotifier(),
+);
 
 // ── Filtered trades provider ──────────────────────────────────────────────────
 
 final filteredTradesProvider = FutureProvider<List<Trade>>((ref) async {
   final filter = ref.watch(tradeFilterProvider);
   final accountId = ref.watch(selectedAccountIdProvider);
-  return ref
-      .watch(tradeRepositoryProvider)
-      .fetchAll(
+  return ref.watch(tradeRepositoryProvider).fetchAll(
         from: filter.from,
         to: filter.to,
         strategyId: filter.strategyId,
@@ -104,7 +102,15 @@ final filteredTradesProvider = FutureProvider<List<Trade>>((ref) async {
 
 final filteredStatsProvider = FutureProvider<PortfolioStats>((ref) async {
   final trades = await ref.watch(filteredTradesProvider.future);
-  return TradeAnalytics.compute(trades, 10000.0);
+  final selected = ref.watch(selectedAccountProvider);
+  final accounts = await ref.watch(accountListProvider.future);
+
+  final balance = selected?.initialBalance ??
+      (accounts.isEmpty
+          ? 10000.0
+          : accounts.fold<double>(0, (s, a) => s + a.initialBalance));
+
+  return TradeAnalytics.compute(trades, balance);
 });
 
 // ── Distinct symbols (for filter dropdowns) ──────────────────────────────────
