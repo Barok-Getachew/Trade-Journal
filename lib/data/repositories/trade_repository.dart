@@ -16,9 +16,11 @@ class TradeRepository {
     String? strategyId,
     String? symbol,
     bool? rulesFollowed,
+    String? accountId,
   }) async {
     // Build filter step-by-step using PostgrestFilterBuilder
     var q = _client.from('trades').select().eq('user_id', _userId);
+    if (accountId != null) q = q.eq('account_id', accountId);
     if (from != null) q = q.gte('entry_at', from.toIso8601String());
     if (to != null) q = q.lte('entry_at', to.toIso8601String());
     if (strategyId != null) q = q.eq('strategy_id', strategyId);
@@ -68,19 +70,21 @@ class TradeRepository {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  Future<List<Trade>> fetchForWeek(DateTime weekStart, DateTime weekEnd) {
-    return fetchAll(from: weekStart, to: weekEnd);
+  Future<List<Trade>> fetchForWeek(DateTime weekStart, DateTime weekEnd,
+      {String? accountId}) {
+    return fetchAll(from: weekStart, to: weekEnd, accountId: accountId);
   }
 
-  Future<List<Trade>> fetchForMonth(int month, int year) {
+  Future<List<Trade>> fetchForMonth(int month, int year, {String? accountId}) {
     final from = DateTime(year, month, 1);
     final to = DateTime(year, month + 1, 0, 23, 59, 59);
-    return fetchAll(from: from, to: to);
+    return fetchAll(from: from, to: to, accountId: accountId);
   }
 
-  Future<List<String>> fetchDistinctSymbols() async {
-    final response =
-        await _client.from('trades').select('symbol').eq('user_id', _userId);
+  Future<List<String>> fetchDistinctSymbols({String? accountId}) async {
+    var q = _client.from('trades').select('symbol').eq('user_id', _userId);
+    if (accountId != null) q = q.eq('account_id', accountId);
+    final response = await q;
     final symbols =
         (response as List).map((e) => e['symbol'] as String).toSet().toList();
     symbols.sort();

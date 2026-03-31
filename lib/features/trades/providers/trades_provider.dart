@@ -5,6 +5,7 @@ import '../../../domain/enums/asset_class.dart';
 import '../../../domain/enums/direction.dart';
 import '../../../domain/enums/session.dart';
 import '../../auth/providers/repository_providers.dart';
+import '../../accounts/providers/account_provider.dart';
 
 // ── Trade filters state ───────────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ final tradeFilterProvider =
 
 final filteredTradesProvider = FutureProvider<List<Trade>>((ref) async {
   final filter = ref.watch(tradeFilterProvider);
+  final accountId = ref.watch(selectedAccountIdProvider);
   return ref
       .watch(tradeRepositoryProvider)
       .fetchAll(
@@ -94,6 +96,7 @@ final filteredTradesProvider = FutureProvider<List<Trade>>((ref) async {
         strategyId: filter.strategyId,
         symbol: filter.symbol,
         rulesFollowed: filter.rulesFollowed,
+        accountId: accountId,
       );
 });
 
@@ -107,5 +110,8 @@ final filteredStatsProvider = FutureProvider<PortfolioStats>((ref) async {
 // ── Distinct symbols (for filter dropdowns) ──────────────────────────────────
 
 final distinctSymbolsProvider = FutureProvider<List<String>>((ref) async {
-  return ref.watch(tradeRepositoryProvider).fetchDistinctSymbols();
+  final accountId = ref.watch(selectedAccountIdProvider);
+  return ref.watch(tradeRepositoryProvider).fetchDistinctSymbols(
+        accountId: accountId,
+      );
 });

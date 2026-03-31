@@ -4,6 +4,7 @@ import '../../../domain/models/trade.dart';
 import '../../../domain/enums/session.dart';
 import '../../../domain/enums/emotion_type.dart';
 import '../../auth/providers/repository_providers.dart';
+import '../../accounts/providers/account_provider.dart';
 
 // ── Analytics filter ──────────────────────────────────────────────────────────
 
@@ -23,9 +24,11 @@ final analyticsFilterProvider = StateProvider<AnalyticsFilter>(
 
 final analyticsTradesProvider = FutureProvider<List<Trade>>((ref) async {
   final f = ref.watch(analyticsFilterProvider);
+  final accountId = ref.watch(selectedAccountIdProvider);
   return ref
       .watch(tradeRepositoryProvider)
-      .fetchAll(from: f.from, to: f.to, strategyId: f.strategyId);
+      .fetchAll(from: f.from, to: f.to, strategyId: f.strategyId,
+          accountId: accountId);
 });
 
 // ── Segment breakdowns ────────────────────────────────────────────────────────
