@@ -10,6 +10,7 @@ import '../../../shared/widgets/charts/trade_calendar_widget.dart';
 import '../../../shared/widgets/common/common_widgets.dart';
 import '../providers/analytics_provider.dart';
 import '../../dashboard/providers/dashboard_provider.dart';
+import '../../insights/providers/insights_provider.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
@@ -35,6 +36,9 @@ class AnalyticsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Mental State ↔ Performance (P2) ──────────────────────────
+            const _MentalStateSection(),
+            const SizedBox(height: AppSpacing.md),
             // ── Professional Metrics ──────────────────────────────────────
             statsAsync.when(
               loading: () =>
@@ -488,6 +492,186 @@ class AnalyticsScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mental State ↔ Performance Section (P2) ──────────────────────────────────
+
+class _MentalStateSection extends ConsumerWidget {
+  const _MentalStateSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final emotionAsync = ref.watch(emotionPerformanceProvider);
+
+    return emotionAsync.when(
+      loading: () =>
+          const LoadingShimmer(width: double.infinity, height: 120),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (stats) {
+        if (stats.isEmpty) return const SizedBox.shrink();
+        return GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SectionHeader(
+                title: 'Mental State vs Performance',
+                subtitle:
+                    'How your emotional state before a trade affects your edge',
+              ),
+              const SizedBox(height: AppSpacing.md),
+              // Best/worst call-out
+              Row(
+                children: [
+                  _emotionChip(stats.first, isBest: true),
+                  const SizedBox(width: AppSpacing.sm),
+                  if (stats.length > 1)
+                    _emotionChip(stats.last, isBest: false),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              // Full table
+              ...stats.map((s) {
+                final maxAbsR = stats
+                    .map((e) => e.avgR.abs())
+                    .fold(0.0, (a, b) => a > b ? a : b);
+                final barFrac =
+                    maxAbsR > 0 ? (s.avgR / maxAbsR).clamp(-1.0, 1.0) : 0.0;
+                final isPos = s.avgR >= 0;
+                final color = isPos ? AppColors.profit : AppColors.loss;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 90,
+                        child: Text(
+                          s.label,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      // Bar
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Stack(
+                            children: [
+                              Container(
+                                height: 14,
+                                color: AppColors.surfaceElevated,
+                              ),
+                              FractionallySizedBox(
+                                widthFactor: barFrac.abs(),
+                                alignment: isPos
+                                    ? Alignment.centerLeft
+                                    : Alignment.centerRight,
+                                child: Container(
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: color.withOpacity(0.7),
+                                    borderRadius:
+                                        BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      // Avg R
+                      SizedBox(
+                        width: 48,
+                        child: Text(
+                          '${isPos ? '+' : ''}${s.avgR.toStringAsFixed(2)}R',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      // Win rate
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          Fmt.percent(s.winRate * 100),
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      // Count
+                      SizedBox(
+                        width: 32,
+                        child: Text(
+                          '${s.count}t',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _emotionChip(EmotionStat s, {required bool isBest}) {
+    final color = isBest ? AppColors.profit : AppColors.loss;
+    final bgColor = isBest ? AppColors.profitDim : AppColors.lossDim;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isBest ? '🏆 Best State' : '⚠ Worst State',
+              style:
+                  const TextStyle(color: AppColors.textMuted, fontSize: 10),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              s.label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              '${s.avgR >= 0 ? '+' : ''}${s.avgR.toStringAsFixed(2)}R avg · ${Fmt.percent(s.winRate * 100)} WR',
+              style: TextStyle(color: color.withOpacity(0.8), fontSize: 11),
             ),
           ],
         ),

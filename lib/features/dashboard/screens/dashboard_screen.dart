@@ -16,6 +16,8 @@ import '../widgets/monthly_target_card.dart';
 import '../widgets/trade_highlight_card.dart';
 import '../widgets/weekly_summary_card.dart';
 import '../../../analytics/trade_analytics.dart';
+import '../../insights/widgets/insights_section.dart';
+import '../../insights/widgets/position_size_calculator.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -38,7 +40,30 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Pre-Market Checklist ────────────────────────────────────────
+            // ── Quick Tools Bar ───────────────────────────────────────────────
+            Row(
+              children: [
+                const Spacer(),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.calculate_rounded, size: 15),
+                  label: const Text('Position Size'),
+                  onPressed: () => showPositionSizeCalculator(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary, width: 1),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    textStyle: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            // ── AI Insights (P1) ─────────────────────────────────────────────
+            const InsightsSection(),
+            const SizedBox(height: AppSpacing.md),
+            // ── Pre-Market Checklist ──────────────────────────────────────────
             _PremarketChecklistCard(state: checklist),
             const SizedBox(height: AppSpacing.md),
             // ── Balance Summary Card ───────────────────────────────────────────
@@ -71,6 +96,9 @@ class DashboardScreen extends ConsumerWidget {
                 _streakBanner(stats),
                 const SizedBox(height: AppSpacing.md),
                 const MonthlyTargetCard(),
+                const SizedBox(height: AppSpacing.md),
+                // ── Streaks & Badges (P4) ────────────────────────────────
+                const StreamsAndBadgesSection(),
               ]),
             ),
             const SizedBox(height: AppSpacing.md),
