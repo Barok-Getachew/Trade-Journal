@@ -23,6 +23,7 @@ class RiskRuleRepository {
   Future<RiskRule> upsert(RiskRule rule) async {
     final data = {
       ...rule.toMap(),
+      'user_id': _userId, // always stamp the real authenticated user
       'updated_at': DateTime.now().toIso8601String(),
     };
     final response = await _client
