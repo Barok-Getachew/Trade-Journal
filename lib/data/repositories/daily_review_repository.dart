@@ -40,6 +40,7 @@ class DailyReviewRepository {
   Future<DailyReview> upsert(DailyReview review) async {
     final data = {
       ...review.toMap(),
+      'user_id': _userId, // always stamp the real authenticated user
       'updated_at': DateTime.now().toIso8601String(),
     };
     final response = await _client
