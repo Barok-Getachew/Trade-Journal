@@ -408,7 +408,19 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
 
       final repoAccounts = await ref.read(accountRepositoryProvider).fetchAll();
       final accountId =
-          f.accountId ?? (repoAccounts.isNotEmpty ? repoAccounts.first.id : '');
+          f.accountId ?? (repoAccounts.isNotEmpty ? repoAccounts.first.id : null);
+
+      // Guard: must have a valid account before sending anything to Supabase
+      if (accountId == null || accountId.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Please select a trading account before saving.'),
+            backgroundColor: AppColors.loss,
+          ));
+        }
+        setState(() => _submitting = false);
+        return;
+      }
 
       // ── Risk Rules Validation ──────────────────────────────────────────────
       final rules =

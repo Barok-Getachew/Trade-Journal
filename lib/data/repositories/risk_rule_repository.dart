@@ -9,6 +9,7 @@ class RiskRuleRepository {
 
   /// Fetch risk rules for an account. Returns null if not yet configured.
   Future<RiskRule?> fetchForAccount(String accountId) async {
+    if (accountId.isEmpty) return null; // guard: never send '' as a UUID
     final response = await _client
         .from('risk_rules')
         .select()
