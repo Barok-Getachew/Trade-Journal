@@ -119,7 +119,26 @@ class MonthlyTargetCard extends ConsumerWidget {
   }
 
   void _showSetTargetDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
+    final account = ref.read(selectedAccountProvider);
+
+    // If no account is selected, prompt the user first
+    if (account == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Select an account from the top bar before setting a goal.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final controller = TextEditingController(
+      text: account.monthlyRTarget != null && account.monthlyRTarget! > 0
+          ? account.monthlyRTarget!.toStringAsFixed(1)
+          : '',
+    );
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -127,6 +146,7 @@ class MonthlyTargetCard extends ConsumerWidget {
         title: const Text('Set Monthly R-Target'),
         content: TextField(
           controller: controller,
+          autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: const InputDecoration(
             labelText: 'Target R-Multiple',
@@ -142,14 +162,17 @@ class MonthlyTargetCard extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               final target = double.tryParse(controller.text);
-              if (target != null) {
-                final account = ref.read(selectedAccountProvider);
-                if (account != null) {
-                  final repo = ref.read(accountRepositoryProvider);
-                  await repo.update(account.id, {'monthly_r_target': target});
-                  ref.invalidate(selectedAccountProvider);
-                  ref.invalidate(monthlyRTargetProvider);
-                }
+              if (target != null && target > 0) {
+                final repo = ref.read(accountRepositoryProvider);
+                // Update Supabase and get the fresh account back
+                final updated = await repo.update(
+                    account.id, {'monthly_r_target': target});
+                // Update selected account state directly — do NOT invalidate
+                // (invalidating a StateProvider resets it to null)
+                ref.read(selectedAccountProvider.notifier).state = updated;
+                // Refresh the accounts list cache and the target provider
+                ref.invalidate(accountsProvider);
+                ref.invalidate(monthlyRTargetProvider);
                 if (ctx.mounted) Navigator.pop(ctx);
               }
             },
