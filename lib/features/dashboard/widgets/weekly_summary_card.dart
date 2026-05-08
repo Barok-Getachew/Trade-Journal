@@ -12,45 +12,61 @@ class WeeklySummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GlassCard(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.bar_chart_rounded,
-                color: AppColors.primary, size: 22),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 480;
+        return GlassCard(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.bar_chart_rounded,
+                    color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Weekly Performance Summary',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: AppColors.textPrimary)),
+                    SizedBox(height: 4),
+                    Text('Review your week and share your progress',
+                        style:
+                            TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+              // Compact icon button on narrow screens
+              if (isNarrow)
+                IconButton(
+                  icon: const Icon(Icons.open_in_new_rounded,
+                      color: AppColors.primary, size: 20),
+                  tooltip: 'View Report',
+                  onPressed: () => _showSummaryModal(context, ref),
+                )
+              else
+                ElevatedButton.icon(
+                  onPressed: () => _showSummaryModal(context, ref),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                  label: const Text('View Report'),
+                  style: ElevatedButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.md),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Weekly Performance Summary',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: AppColors.textPrimary)),
-                SizedBox(height: 4),
-                Text('Review your week and share your progress',
-                    style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-              ],
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => _showSummaryModal(context, ref),
-            icon: const Icon(Icons.open_in_new_rounded, size: 14),
-            label: const Text('View Report'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

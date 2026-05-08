@@ -653,32 +653,39 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
             minHeight: 3,
           ),
           Expanded(
-            child: Row(
-              children: [
-                _StepSidebar(currentStep: form.step, steps: _steps),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (child, anim) => FadeTransition(
-                      opacity: anim,
-                      child: SlideTransition(
-                        position: Tween(
-                                begin: const Offset(0.03, 0), end: Offset.zero)
-                            .animate(anim),
-                        child: child,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobileForm = constraints.maxWidth < 700;
+                return Row(
+                  children: [
+                    if (!isMobileForm)
+                      _StepSidebar(currentStep: form.step, steps: _steps),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        transitionBuilder: (child, anim) => FadeTransition(
+                          opacity: anim,
+                          child: SlideTransition(
+                            position: Tween(
+                                    begin: const Offset(0.03, 0),
+                                    end: Offset.zero)
+                                .animate(anim),
+                            child: child,
+                          ),
+                        ),
+                        child: Form(
+                          key: _formKeys[form.step],
+                          child: _StepBody(
+                            key: ValueKey(form.step),
+                            child: _buildStep(form, notifier, form.step),
+                          ),
+                        ),
                       ),
                     ),
-                    child: Form(
-                      key: _formKeys[form.step],
-                      child: _StepBody(
-                        key: ValueKey(form.step),
-                        child: _buildStep(form, notifier, form.step),
-                      ),
-                    ),
-                  ),
-                ),
-                _PreviewPanel(form: form),
-              ],
+                    if (!isMobileForm) _PreviewPanel(form: form),
+                  ],
+                );
+              },
             ),
           ),
           _BottomNav(

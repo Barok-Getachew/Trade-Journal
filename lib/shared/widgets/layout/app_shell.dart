@@ -111,6 +111,41 @@ class _MobileShell extends StatelessWidget {
               );
             },
           ),
+          // User avatar — tap to open profile
+          Consumer(
+            builder: (ctx, ref, _) {
+              final initial = ref.watch(userInitialProvider);
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => showProfileDialog(ctx),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    margin: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primaryLight],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           // Hamburger opens full sidebar as a Drawer
           Builder(
             builder: (ctx) => IconButton(
@@ -191,6 +226,7 @@ class _MobileShell extends StatelessWidget {
 
   String _getTitle(String location) {
     if (location.startsWith('/trades/new')) return 'New Trade';
+    if (location.startsWith('/trades/import')) return 'Import Trades';
     if (location.contains('/trades/') && location.endsWith('/edit'))
       return 'Edit Trade';
     if (location.startsWith('/trades/')) return 'Trade Detail';
@@ -309,6 +345,7 @@ class _AppBar extends ConsumerWidget {
 
   String _getTitle(String location) {
     if (location.startsWith('/trades/new')) return 'New Trade';
+    if (location.startsWith('/trades/import')) return 'Import Trades';
     if (location.contains('/trades/') && location.endsWith('/edit'))
       return 'Edit Trade';
     if (location.startsWith('/trades/')) return 'Trade Detail';

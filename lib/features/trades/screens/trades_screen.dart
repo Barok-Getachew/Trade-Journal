@@ -23,100 +23,216 @@ class TradesScreen extends ConsumerWidget {
     final isMobile = MediaQuery.of(context).size.width < _kMobileBreak;
 
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(isMobile ? AppSpacing.md : AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Action Row
-          Row(
-            children: [
-              // Filter chips
-              if (!filter.isEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryDim,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.filter_list_rounded,
-                        size: 14,
-                        color: AppColors.primaryLight,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Filters active',
-                        style: TextStyle(
-                          color: AppColors.primaryLight,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
+          // Action Row — compact on mobile
+          if (isMobile)
+            Row(
+              children: [
+                if (!filter.isEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryDim,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.filter_list_rounded,
+                          size: 12, color: AppColors.primaryLight),
+                      const SizedBox(width: 4),
+                      const Text('Filtered',
+                          style: TextStyle(
+                              color: AppColors.primaryLight, fontSize: 11)),
+                      const SizedBox(width: 4),
                       InkWell(
                         onTap: () =>
                             ref.read(tradeFilterProvider.notifier).reset(),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          size: 14,
-                          color: AppColors.primaryLight,
-                        ),
+                        child: const Icon(Icons.close_rounded,
+                            size: 12, color: AppColors.primaryLight),
                       ),
-                    ],
+                    ]),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                const Spacer(),
+                // Date range — icon only on mobile
+                IconButton(
+                  icon: Icon(
+                    Icons.calendar_today_outlined,
+                    color: filter.from != null
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  tooltip: 'Date Range',
+                  onPressed: () async {
+                    final range = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                      builder: (ctx, child) =>
+                          Theme(data: Theme.of(ctx), child: child!),
+                    );
+                    if (range != null) {
+                      ref
+                          .read(tradeFilterProvider.notifier)
+                          .setDateRange(range.start, range.end);
+                    }
+                  },
+                ),
+                // Import — icon only on mobile
+                IconButton(
+                  icon: const Icon(Icons.upload_file_rounded,
+                      color: AppColors.textSecondary, size: 20),
+                  tooltip: 'Import CSV',
+                  onPressed: () => context.push('/trades/import'),
+                ),
+                // New Trade
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text('New'),
+                  onPressed: () => context.push('/trades/new'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 13),
                   ),
                 ),
-              const Spacer(),
-              // Date filter
-              OutlinedButton.icon(
-                icon: const Icon(Icons.calendar_today_outlined, size: 14),
-                label: Text(
-                  filter.from != null
-                      ? '${Fmt.date(filter.from)} – ${Fmt.date(filter.to)}'
-                      : 'Date Range',
+              ],
+            )
+          else
+            Row(
+              children: [
+                // Filter chips
+                if (!filter.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryDim,
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.radiusFull),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.filter_list_rounded,
+                            size: 14, color: AppColors.primaryLight),
+                        const SizedBox(width: 6),
+                        const Text('Filters active',
+                            style: TextStyle(
+                                color: AppColors.primaryLight,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500)),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () =>
+                              ref.read(tradeFilterProvider.notifier).reset(),
+                          child: const Icon(Icons.close_rounded,
+                              size: 14, color: AppColors.primaryLight),
+                        ),
+                      ],
+                    ),
+                  ),
+                const Spacer(),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today_outlined, size: 14),
+                  label: Text(
+                    filter.from != null
+                        ? '${Fmt.date(filter.from)} – ${Fmt.date(filter.to)}'
+                        : 'Date Range',
+                  ),
+                  onPressed: () async {
+                    final range = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                      builder: (ctx, child) =>
+                          Theme(data: Theme.of(ctx), child: child!),
+                    );
+                    if (range != null) {
+                      ref
+                          .read(tradeFilterProvider.notifier)
+                          .setDateRange(range.start, range.end);
+                    }
+                  },
                 ),
-                onPressed: () async {
-                  final range = await showDateRangePicker(
-                    context: context,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                    builder: (ctx, child) =>
-                        Theme(data: Theme.of(ctx), child: child!),
-                  );
-                  if (range != null) {
-                    ref
-                        .read(tradeFilterProvider.notifier)
-                        .setDateRange(range.start, range.end);
-                  }
-                },
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.upload_file_rounded, size: 16),
-                label: const Text('Import'),
-                onPressed: () => context.push('/trades/import'),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: const Text('New Trade'),
-                onPressed: () => context.push('/trades/new'),
-              ),
-            ],
-          ),
+                const SizedBox(width: AppSpacing.sm),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.upload_file_rounded, size: 16),
+                  label: const Text('Import'),
+                  onPressed: () => context.push('/trades/import'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text('New Trade'),
+                  onPressed: () => context.push('/trades/new'),
+                ),
+              ],
+            ),
           const SizedBox(height: AppSpacing.md),
-          // Stats bar
+          // Stats bar — 2×2 grid on mobile, single row on desktop
           tradesAsync.when(
             loading: () => const SizedBox(),
             error: (_, __) => const SizedBox(),
             data: (trades) {
               final wins = trades.where((t) => t.isWin).length;
               final totalR = trades.fold<double>(0, (s, t) => s + t.rMultiple);
+              final winRateColor =
+                  wins / (trades.isEmpty ? 1 : trades.length) >= 0.5
+                      ? AppColors.profit
+                      : AppColors.loss;
+              if (isMobile) {
+                return Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _stat(context, trades.length.toString(),
+                            'Trades'),
+                      ),
+                      _divider(),
+                      Expanded(
+                        child: _stat(context, wins.toString(), 'Wins',
+                            color: AppColors.profit),
+                      ),
+                      _divider(),
+                      Expanded(
+                        child: _stat(
+                          context,
+                          (trades.isEmpty
+                                  ? 0
+                                  : (wins / trades.length * 100))
+                              .toStringAsFixed(0),
+                          'Win %',
+                          suffix: '%',
+                          color: winRateColor,
+                        ),
+                      ),
+                      _divider(),
+                      Expanded(
+                        child: _stat(
+                          context,
+                          Fmt.rMultiple(totalR),
+                          'Total R',
+                          color:
+                              totalR >= 0 ? AppColors.profit : AppColors.loss,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg,
@@ -131,12 +247,8 @@ class TradesScreen extends ConsumerWidget {
                   children: [
                     _stat(context, trades.length.toString(), 'Trades'),
                     _divider(),
-                    _stat(
-                      context,
-                      wins.toString(),
-                      'Wins',
-                      color: AppColors.profit,
-                    ),
+                    _stat(context, wins.toString(), 'Wins',
+                        color: AppColors.profit),
                     _divider(),
                     _stat(
                       context,
@@ -144,9 +256,7 @@ class TradesScreen extends ConsumerWidget {
                           .toStringAsFixed(1),
                       'Win %',
                       suffix: '%',
-                      color: wins / (trades.isEmpty ? 1 : trades.length) >= 0.5
-                          ? AppColors.profit
-                          : AppColors.loss,
+                      color: winRateColor,
                     ),
                     _divider(),
                     _stat(
