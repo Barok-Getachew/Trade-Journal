@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/models/daily_review.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../auth/providers/repository_providers.dart';
 import '../../accounts/providers/account_provider.dart';
 
@@ -34,4 +35,22 @@ final recentDailyReviewsProvider =
   return ref
       .read(dailyReviewRepositoryProvider)
       .fetchRecent(accountId, limit: 30);
+});
+
+// ── ALL daily reviews for the user (global — no account filter) ───────────────
+
+final allDailyReviewsProvider =
+    FutureProvider.autoDispose<List<DailyReview>>((ref) async {
+  final authState = ref.watch(authStateProvider).valueOrNull;
+  if (authState?.session == null) return [];
+  return ref.read(dailyReviewRepositoryProvider).fetchAllForUser(limit: 90);
+});
+
+// ── Today's review (global — no account filter) ───────────────────────────────
+
+final todayReviewGlobalProvider =
+    FutureProvider.autoDispose<DailyReview?>((ref) async {
+  final authState = ref.watch(authStateProvider).valueOrNull;
+  if (authState?.session == null) return null;
+  return ref.read(dailyReviewRepositoryProvider).fetchTodayForUser();
 });

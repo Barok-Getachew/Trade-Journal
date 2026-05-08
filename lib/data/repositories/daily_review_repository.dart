@@ -36,6 +36,33 @@ class DailyReviewRepository {
         .toList();
   }
 
+  /// Fetch ALL daily reviews for the user across all accounts (global view).
+  Future<List<DailyReview>> fetchAllForUser({int limit = 90}) async {
+    final response = await _client
+        .from('daily_reviews')
+        .select()
+        .eq('user_id', _userId)
+        .order('review_date', ascending: false)
+        .limit(limit);
+    return (response as List)
+        .map((e) => DailyReview.fromMap(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Fetch today's review for the user regardless of which account it was saved under.
+  Future<DailyReview?> fetchTodayForUser() async {
+    final dateStr = DateTime.now().toIso8601String().substring(0, 10);
+    final response = await _client
+        .from('daily_reviews')
+        .select()
+        .eq('user_id', _userId)
+        .eq('review_date', dateStr)
+        .limit(1)
+        .maybeSingle();
+    if (response == null) return null;
+    return DailyReview.fromMap(response as Map<String, dynamic>);
+  }
+
   /// Upsert a daily review (insert or update by unique (user_id, account_id, review_date)).
   Future<DailyReview> upsert(DailyReview review) async {
     final data = {
