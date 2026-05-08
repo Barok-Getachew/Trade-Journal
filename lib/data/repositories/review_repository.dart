@@ -33,9 +33,19 @@ class ReviewRepository {
   }
 
   Future<WeeklyReview> upsertWeekly(Map<String, dynamic> data) async {
+    // Ensure week_start is date-only (no time component)
+    if (data['week_start'] is String) {
+      data['week_start'] =
+          (data['week_start'] as String).split('T').first;
+    }
+    if (data['week_end'] is String) {
+      data['week_end'] =
+          (data['week_end'] as String).split('T').first;
+    }
     final response = await _client
         .from('weekly_reviews')
-        .upsert({...data, 'user_id': _userId})
+        .upsert({...data, 'user_id': _userId},
+            onConflict: 'user_id,week_start')
         .select()
         .single();
     return WeeklyReview.fromMap(response as Map<String, dynamic>);
