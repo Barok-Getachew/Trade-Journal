@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -210,6 +211,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       : null,
                                   onSubmitted: _isSignUp ? null : (_) => _submit(),
                                 ),
+                                if (!_isSignUp) ...[
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: () => context.go('/forgot-password'),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: AppColors.textSecondary,
+                                        padding: EdgeInsets.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      child: const Text('Forgot password?',
+                                          style: TextStyle(fontSize: 12)),
+                                    ),
+                                  ),
+                                ],
                                 if (_isSignUp) ...[
                                   const SizedBox(height: AppSpacing.md),
                                   _InputField(

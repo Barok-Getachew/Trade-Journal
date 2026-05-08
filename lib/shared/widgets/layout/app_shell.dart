@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../shared/providers/theme_provider.dart';
+import '../../../features/auth/providers/auth_provider.dart';
+import '../../../features/profile/profile_dialog.dart';
 import 'sidebar_nav.dart';
 
 class AppShell extends StatelessWidget {
@@ -297,7 +299,8 @@ class _AppBar extends ConsumerWidget {
             onPressed: () {},
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(_timeNow(), style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(width: AppSpacing.md),
+          _UserAvatarChip(),
           const SizedBox(width: AppSpacing.md),
         ],
       ),
@@ -322,5 +325,51 @@ class _AppBar extends ConsumerWidget {
   String _timeNow() {
     final now = DateTime.now();
     return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+// ── User avatar chip (desktop AppBar) ─────────────────────────────────────────
+
+class _UserAvatarChip extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final initial = ref.watch(userInitialProvider);
+    final email = ref.watch(userEmailProvider);
+
+    return Tooltip(
+      message: email,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => showProfileDialog(context),
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            initial,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

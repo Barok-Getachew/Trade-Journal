@@ -14,3 +14,14 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(supabaseClientProvider).auth.currentUser;
 });
+
+// ── Convenience providers for user identity ──────────────────────────────────
+final userEmailProvider = Provider<String>((ref) {
+  return ref.watch(currentUserProvider)?.email ?? '';
+});
+
+/// Single uppercase letter for the avatar circle (first char of email).
+final userInitialProvider = Provider<String>((ref) {
+  final email = ref.watch(userEmailProvider);
+  return email.isEmpty ? '?' : email[0].toUpperCase();
+});

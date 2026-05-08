@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:journal/core/theme/app_colors.dart';
 import 'package:journal/core/theme/app_spacing.dart';
 import 'package:journal/features/accounts/providers/account_provider.dart';
+import 'package:journal/features/auth/providers/auth_provider.dart';
+import 'package:journal/features/profile/profile_dialog.dart';
 
 class _NavItem {
   final String label;
@@ -124,7 +126,8 @@ class SidebarNav extends ConsumerWidget {
             ),
           ),
           const Divider(color: AppColors.border, height: 1),
-          // ── Account switcher ─────────────────────────────────────────────────
+
+          // ── Account switcher ──────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(
                 AppSpacing.sm, AppSpacing.md, AppSpacing.sm, AppSpacing.sm),
@@ -196,6 +199,7 @@ class SidebarNav extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: AppSpacing.sm),
+
           // ── Nav items ──────────────────────────────────────────────────────
           Expanded(
             child: ListView(
@@ -206,18 +210,11 @@ class SidebarNav extends ConsumerWidget {
               }).toList(),
             ),
           ),
+
           const Divider(color: AppColors.border, height: 1),
-          // ── Log out ───────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: _SidebarActionButton(
-              icon: Icons.logout_rounded,
-              label: 'Log Out',
-              onTap: () async {
-                await Supabase.instance.client.auth.signOut();
-              },
-            ),
-          ),
+
+          // ── User profile tile ──────────────────────────────────────────────
+          _UserProfileTile(),
         ],
       ),
     );
@@ -236,6 +233,167 @@ class SidebarNav extends ConsumerWidget {
     );
   }
 }
+
+// ── User Profile Tile ──────────────────────────────────────────────────────────
+
+class _UserProfileTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final email = ref.watch(userEmailProvider);
+    final initial = ref.watch(userInitialProvider);
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      child: PopupMenuButton<_UserAction>(
+        offset: const Offset(0, -120),
+        color: AppColors.surfaceElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        itemBuilder: (_) => [
+          PopupMenuItem(
+            value: _UserAction.profile,
+            child: Row(children: [
+              const Icon(Icons.manage_accounts_rounded,
+                  size: 18, color: AppColors.textSecondary),
+              const SizedBox(width: 10),
+              const Text('Profile & Settings',
+                  style: TextStyle(
+                      color: AppColors.textPrimary, fontSize: 13)),
+            ]),
+          ),
+          const PopupMenuDivider(),
+          PopupMenuItem(
+            value: _UserAction.signOut,
+            child: Row(children: [
+              const Icon(Icons.logout_rounded,
+                  size: 18, color: AppColors.loss),
+              const SizedBox(width: 10),
+              const Text('Sign Out',
+                  style: TextStyle(
+                      color: AppColors.loss,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ],
+        onSelected: (action) async {
+          if (action == _UserAction.profile) {
+            await showProfileDialog(context);
+          } else if (action == _UserAction.signOut) {
+            _confirmSignOut(context, ref);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              // Avatar
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      email,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500),
+                    ),
+                    const Text(
+                      'Trader',
+                      style: TextStyle(
+                          color: AppColors.textMuted, fontSize: 10),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.unfold_more_rounded,
+                  size: 16, color: AppColors.textMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmSignOut(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: const Text('Sign Out',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: const Text('Are you sure you want to sign out?',
+            style: TextStyle(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              // Clean up state before signing out
+              ref.read(selectedAccountProvider.notifier).state = null;
+              ref.invalidate(accountListProvider);
+              await Supabase.instance.client.auth.signOut();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.loss,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: const Text('Sign Out',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _UserAction { profile, signOut }
+
+// ── Sidebar nav item ───────────────────────────────────────────────────────────
 
 class _SidebarItem extends StatelessWidget {
   final _NavItem item;
@@ -266,7 +424,8 @@ class _SidebarItem extends StatelessWidget {
               children: [
                 Icon(
                   isActive ? item.iconActive : item.icon,
-                  color: isActive ? AppColors.primary : AppColors.textSecondary,
+                  color:
+                      isActive ? AppColors.primary : AppColors.textSecondary,
                   size: 20,
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -293,49 +452,6 @@ class _SidebarItem extends StatelessWidget {
                   ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SidebarActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _SidebarActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        hoverColor: AppColors.lossDim,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: 12,
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: AppColors.textMuted, size: 20),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                label,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelLarge?.copyWith(color: AppColors.textMuted),
-              ),
-            ],
           ),
         ),
       ),
