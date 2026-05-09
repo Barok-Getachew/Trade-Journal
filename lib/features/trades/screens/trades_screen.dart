@@ -11,16 +11,29 @@ import '../../../shared/widgets/common/common_widgets.dart';
 import '../providers/trades_provider.dart';
 import '../../auth/providers/repository_providers.dart';
 
-class TradesScreen extends ConsumerWidget {
+class TradesScreen extends ConsumerStatefulWidget {
   const TradesScreen({super.key});
 
   static const _kMobileBreak = 700.0;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tradesAsync = ref.watch(filteredTradesProvider);
+  ConsumerState<TradesScreen> createState() => _TradesScreenState();
+}
+
+class _TradesScreenState extends ConsumerState<TradesScreen> {
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tradesAsync = ref.watch(searchedTradesProvider);
     final filter = ref.watch(tradeFilterProvider);
-    final isMobile = MediaQuery.of(context).size.width < _kMobileBreak;
+    final isMobile = MediaQuery.of(context).size.width < TradesScreen._kMobileBreak;
 
     return Padding(
       padding: EdgeInsets.all(isMobile ? AppSpacing.md : AppSpacing.lg),
@@ -270,8 +283,54 @@ class TradesScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: AppSpacing.sm),
+          // ── Search Bar ───────────────────────────────────────────────────
+          TextField(
+            controller: _searchCtrl,
+            onChanged: (v) =>
+                ref.read(tradeFilterProvider.notifier).setSearch(v),
+            style: const TextStyle(
+                color: AppColors.textPrimary, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Search symbol, notes, setup, session…',
+              hintStyle: const TextStyle(
+                  color: AppColors.textMuted, fontSize: 13),
+              prefixIcon: const Icon(Icons.search_rounded,
+                  color: AppColors.textMuted, size: 18),
+              suffixIcon: _searchCtrl.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded,
+                          color: AppColors.textMuted, size: 16),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        ref
+                            .read(tradeFilterProvider.notifier)
+                            .setSearch('');
+                        setState(() {});
+                      },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 10),
+              filled: true,
+              fillColor: AppColors.surface,
+              enabledBorder: OutlineInputBorder(
+                borderRadius:
+                    BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide:
+                    const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius:
+                    BorderRadius.circular(AppSpacing.radiusMd),
+                borderSide: const BorderSide(
+                    color: AppColors.primary, width: 1.5),
+              ),
+            ),
+          ),
           const SizedBox(height: AppSpacing.md),
-          // Table / Card list
+          // ── Table / Card List ────────────────────────────────────────────
           Expanded(
             child: Container(
               decoration: BoxDecoration(

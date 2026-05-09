@@ -18,6 +18,7 @@ class TradeFilter {
   final AssetClass? assetClass;
   final TradeDirection? direction;
   final TradingSession? session;
+  final String searchQuery; // client-side text search
 
   const TradeFilter({
     this.from,
@@ -28,6 +29,7 @@ class TradeFilter {
     this.assetClass,
     this.direction,
     this.session,
+    this.searchQuery = '',
   });
 
   TradeFilter copyWith({
@@ -39,6 +41,7 @@ class TradeFilter {
     AssetClass? assetClass,
     TradeDirection? direction,
     TradingSession? session,
+    String? searchQuery,
   }) {
     return TradeFilter(
       from: from ?? this.from,
@@ -49,6 +52,7 @@ class TradeFilter {
       assetClass: assetClass ?? this.assetClass,
       direction: direction ?? this.direction,
       session: session ?? this.session,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 
@@ -60,7 +64,8 @@ class TradeFilter {
       rulesFollowed == null &&
       assetClass == null &&
       direction == null &&
-      session == null;
+      session == null &&
+      searchQuery.isEmpty;
 }
 
 class TradeFilterNotifier extends StateNotifier<TradeFilter> {
@@ -76,6 +81,7 @@ class TradeFilterNotifier extends StateNotifier<TradeFilter> {
   void setStrategy(String? id) => state = state.copyWith(strategyId: id);
   void setSymbol(String? s) => state = state.copyWith(symbol: s);
   void setRulesFollowed(bool? v) => state = state.copyWith(rulesFollowed: v);
+  void setSearch(String q) => state = state.copyWith(searchQuery: q);
 }
 
 final tradeFilterProvider =
@@ -111,6 +117,25 @@ final filteredStatsProvider = FutureProvider<PortfolioStats>((ref) async {
           : accounts.fold<double>(0, (s, a) => s + a.initialBalance));
 
   return TradeAnalytics.compute(trades, balance);
+});
+
+// ── Filtered + searched trades (client-side text search applied last) ──────────
+
+final searchedTradesProvider = Provider<AsyncValue<List<Trade>>>((ref) {
+  final tradesAsync = ref.watch(filteredTradesProvider);
+  final query = ref.watch(tradeFilterProvider).searchQuery.toLowerCase().trim();
+
+  return tradesAsync.whenData((trades) {
+    if (query.isEmpty) return trades;
+    return trades.where((t) {
+      return t.symbol.toLowerCase().contains(query) ||
+          (t.reflection?.toLowerCase().contains(query) ?? false) ||
+          (t.mistakeType?.toLowerCase().contains(query) ?? false) ||
+          (t.setupType?.toLowerCase().contains(query) ?? false) ||
+          t.assetClass.name.toLowerCase().contains(query) ||
+          (t.session?.label.toLowerCase().contains(query) ?? false);
+    }).toList();
+  });
 });
 
 // ── Distinct symbols (for filter dropdowns) ──────────────────────────────────
