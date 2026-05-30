@@ -15,26 +15,83 @@ Future<void> showPositionSizeCalculator(BuildContext context) {
   );
 }
 
+enum _InstrumentMode { forex, gold, commodity, stocks }
+
+extension _InstrumentModeExt on _InstrumentMode {
+  String get label {
+    switch (this) {
+      case _InstrumentMode.forex:
+        return '📈 Forex';
+      case _InstrumentMode.gold:
+        return '🥇 Gold (XAU)';
+      case _InstrumentMode.commodity:
+        return '🛢️ Commodity';
+      case _InstrumentMode.stocks:
+        return '📊 Stocks / Other';
+    }
+  }
+
+  String get stopLabel {
+    switch (this) {
+      case _InstrumentMode.forex:
+        return 'Stop Loss (Pips)';
+      case _InstrumentMode.gold:
+        return 'Stop Loss (\$/oz)';
+      case _InstrumentMode.commodity:
+        return 'Stop Loss (pts/ticks)';
+      case _InstrumentMode.stocks:
+        return 'Stop Loss (\$)';
+    }
+  }
+
+  String get resultLabel {
+    switch (this) {
+      case _InstrumentMode.forex:
+        return 'Lot Size';
+      case _InstrumentMode.gold:
+        return 'Lots (100 oz)';
+      case _InstrumentMode.commodity:
+        return 'Contracts';
+      case _InstrumentMode.stocks:
+        return 'Shares';
+    }
+  }
+
+  String get hint {
+    switch (this) {
+      case _InstrumentMode.forex:
+        return 'Standard lot = 100,000 units. Pip value varies by pair (e.g. EUR/USD ≈ \$10/pip/lot).';
+      case _InstrumentMode.gold:
+        return 'XAU/USD: 1 standard lot = 100 oz. Pip value = \$1 per 0.01 price move per lot.';
+      case _InstrumentMode.commodity:
+        return 'Enter tick value per contract (e.g. Oil = \$10/pt/contract).';
+      case _InstrumentMode.stocks:
+        return 'Stop in dollars per share. Result = shares to buy.';
+    }
+  }
+}
+
 class _PositionSizeSheet extends ConsumerStatefulWidget {
   const _PositionSizeSheet();
 
   @override
-  ConsumerState<_PositionSizeSheet> createState() =>
-      _PositionSizeSheetState();
+  ConsumerState<_PositionSizeSheet> createState() => _PositionSizeSheetState();
 }
 
 class _PositionSizeSheetState extends ConsumerState<_PositionSizeSheet> {
   final _balanceCtrl = TextEditingController();
   final _riskPctCtrl = TextEditingController(text: '1.0');
   final _stopDistCtrl = TextEditingController();
+  // Forex pip value per lot (default EUR/USD ≈ $10)
   final _pipValueCtrl = TextEditingController(text: '10.0');
+  // Commodity tick value per contract
+  final _tickValueCtrl = TextEditingController(text: '10.0');
 
-  bool _useForexMode = true; // false = generic (stop in $)
+  _InstrumentMode _mode = _InstrumentMode.forex;
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill balance from current account
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final balanceAsync = ref.read(currentBalanceProvider);
       balanceAsync.whenData((bal) {
@@ -50,6 +107,7 @@ class _PositionSizeSheetState extends ConsumerState<_PositionSizeSheet> {
     _riskPctCtrl.dispose();
     _stopDistCtrl.dispose();
     _pipValueCtrl.dispose();
+    _tickValueCtrl.dispose();
     super.dispose();
   }
 
@@ -57,17 +115,52 @@ class _PositionSizeSheetState extends ConsumerState<_PositionSizeSheet> {
   double get _riskPct => double.tryParse(_riskPctCtrl.text) ?? 1;
   double get _stopDist => double.tryParse(_stopDistCtrl.text) ?? 0;
   double get _pipValue => double.tryParse(_pipValueCtrl.text) ?? 10;
+  double get _tickValue => double.tryParse(_tickValueCtrl.text) ?? 10;
 
   double get _riskAmount => _balance * _riskPct / 100;
 
   double get _positionSize {
-    if (_stopDist <= 0) return 0;
-    if (_useForexMode) {
-      // lots = riskAmount / (stopPips × pipValuePerLot)
-      return _riskAmount / (_stopDist * _pipValue);
-    } else {
-      // units = riskAmount / stopDistance($)
-      return _riskAmount / _stopDist;
+    if (_stopDist <= 0 || _balance <= 0) return 0;
+    switch (_mode) {
+      case _InstrumentMode.forex:
+        // lots = riskAmount / (stopPips × pipValue$/lot)
+        return _riskAmount / (_stopDist * _pipValue);
+      case _InstrumentMode.gold:
+        // XAU: 1 lot = 100 oz. Dollar risk per lot = stopDist($/oz) × 100
+        return _riskAmount / (_stopDist * 100);
+      case _InstrumentMode.commodity:
+        // contracts = riskAmount / (stopPoints × tickValue/contract)
+        return _riskAmount / (_stopDist * _tickValue);
+      case _InstrumentMode.stocks:
+        // shares = riskAmount / stopDist($)
+        return _riskAmount / _stopDist;
+    }
+  }
+
+  String get _resultNote {
+    final size = _positionSize;
+    if (size <= 0) return '';
+    switch (_mode) {
+      case _InstrumentMode.forex:
+        return '${(size * 100000).toStringAsFixed(0)} units';
+      case _InstrumentMode.gold:
+        return '${(size * 100).toStringAsFixed(1)} oz total';
+      case _InstrumentMode.commodity:
+        return 'Total risk: \$${_riskAmount.toStringAsFixed(2)}';
+      case _InstrumentMode.stocks:
+        return 'Total risk: \$${_riskAmount.toStringAsFixed(2)}';
+    }
+  }
+
+  String _formatResult(double size) {
+    switch (_mode) {
+      case _InstrumentMode.forex:
+      case _InstrumentMode.gold:
+        return size.toStringAsFixed(2);
+      case _InstrumentMode.commodity:
+        return size.toStringAsFixed(2);
+      case _InstrumentMode.stocks:
+        return size.toStringAsFixed(0);
     }
   }
 
@@ -100,225 +193,280 @@ class _PositionSizeSheetState extends ConsumerState<_PositionSizeSheet> {
               offset: const Offset(0, -8))
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            width: 36,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(99),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(99),
+              ),
             ),
-          ),
-          // Header
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.primaryLight],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.calculate_rounded,
-                      color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Position Size Calculator',
-                          style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16)),
-                      Text('Risk-based lot size calculator',
-                          style: TextStyle(
-                              color: AppColors.textMuted, fontSize: 11)),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppColors.textMuted, size: 20),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-          const Divider(color: AppColors.border),
-          // Mode toggle
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-            child: Row(
-              children: [
-                const Text('Mode:',
-                    style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12)),
-                const SizedBox(width: 12),
-                _ModeChip(
-                  label: '📈 Forex (Pips)',
-                  selected: _useForexMode,
-                  onTap: () => setState(() => _useForexMode = true),
-                ),
-                const SizedBox(width: 8),
-                _ModeChip(
-                  label: '📊 Generic (\$)',
-                  selected: !_useForexMode,
-                  onTap: () => setState(() => _useForexMode = false),
-                ),
-              ],
-            ),
-          ),
-          // Inputs
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _CalcField(
-                        controller: _balanceCtrl,
-                        label: 'Account Balance',
-                        prefix: '\$',
-                        onChanged: (_) => setState(() {}),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primaryLight],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    const SizedBox(width: AppSpacing.sm),
+                    child: const Icon(Icons.calculate_rounded,
+                        color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Position Size Calculator',
+                            style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16)),
+                        Text('Forex · Gold · Commodities · Stocks',
+                            style: TextStyle(
+                                color: AppColors.textMuted, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded,
+                        color: AppColors.textMuted, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: AppColors.border),
+
+            // ── Instrument Mode Selector ──────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Instrument',
+                      style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _InstrumentMode.values
+                        .map((m) => _ModeChip(
+                              label: m.label,
+                              selected: _mode == m,
+                              onTap: () => setState(() {
+                                _mode = m;
+                                _stopDistCtrl.clear();
+                              }),
+                            ))
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Hint Banner ───────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                  border:
+                      Border.all(color: AppColors.primary.withOpacity(0.18)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        color: AppColors.primary, size: 14),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: _CalcField(
-                        controller: _riskPctCtrl,
-                        label: 'Risk %',
-                        suffix: '%',
-                        onChanged: (_) => setState(() {}),
+                      child: Text(
+                        _mode.hint,
+                        style: const TextStyle(
+                            color: AppColors.textSecondary, fontSize: 11),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _CalcField(
-                        controller: _stopDistCtrl,
-                        label: _useForexMode ? 'Stop Loss (Pips)' : 'Stop Loss (\$)',
-                        onChanged: (_) => setState(() {}),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
+
+            // ── Inputs ────────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                children: [
+                  // Row 1: Balance + Risk %
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CalcField(
+                          controller: _balanceCtrl,
+                          label: 'Account Balance',
+                          prefix: '\$',
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                    if (_useForexMode) ...[
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: _CalcField(
-                          controller: _pipValueCtrl,
-                          label: 'Pip Value (\$/lot)',
+                          controller: _riskPctCtrl,
+                          label: 'Risk %',
+                          suffix: '%',
                           onChanged: (_) => setState(() {}),
                         ),
                       ),
                     ],
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          // Results panel
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withOpacity(0.08),
-                  AppColors.primaryDim.withOpacity(0.3),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ResultTile(
-                    label: 'Risk Amount',
-                    value: '\$${_riskAmount.toStringAsFixed(2)}',
-                    color: riskOk ? AppColors.profit : AppColors.warning,
-                    note: riskOk ? null : '> 2% — High Risk',
                   ),
-                ),
-                Container(
-                    width: 1, height: 40, color: AppColors.border),
-                Expanded(
-                  child: _ResultTile(
-                    label: _useForexMode ? 'Lot Size' : 'Units',
-                    value: _useForexMode
-                        ? size.toStringAsFixed(2)
-                        : size.toStringAsFixed(0),
-                    color: AppColors.primary,
-                    note: _useForexMode && size > 0
-                        ? '${(size * 100000).toStringAsFixed(0)} units'
-                        : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Risk warning
-          if (_riskPct > 2)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.warningDim,
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.radiusSm),
-                  border: Border.all(
-                      color: AppColors.warning.withOpacity(0.3)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.warning_amber_rounded,
-                        color: AppColors.warning, size: 14),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Risking more than 2% per trade significantly increases account blow-up risk.',
-                        style: TextStyle(
-                            color: AppColors.warning, fontSize: 11),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Row 2: Stop distance + optional pip/tick value
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CalcField(
+                          controller: _stopDistCtrl,
+                          label: _mode.stopLabel,
+                          onChanged: (_) => setState(() {}),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      if (_mode == _InstrumentMode.forex) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: _CalcField(
+                            controller: _pipValueCtrl,
+                            label: 'Pip Value (\$/lot)',
+                            hint: 'EUR/USD≈10, GBP/USD≈10',
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                      ],
+                      if (_mode == _InstrumentMode.commodity) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: _CalcField(
+                            controller: _tickValueCtrl,
+                            label: 'Tick Value (\$/contract)',
+                            hint: 'Oil≈10, Nat Gas≈10',
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ),
             ),
-          const SizedBox(height: AppSpacing.xl),
-        ],
+
+            const SizedBox(height: AppSpacing.md),
+
+            // ── Results Panel ─────────────────────────────────────────────────
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withOpacity(0.08),
+                    AppColors.primaryDim.withOpacity(0.3),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ResultTile(
+                      label: 'Risk Amount',
+                      value: '\$${_riskAmount.toStringAsFixed(2)}',
+                      color: riskOk ? AppColors.profit : AppColors.warning,
+                      note: riskOk ? null : '> 2% — High Risk',
+                    ),
+                  ),
+                  Container(width: 1, height: 40, color: AppColors.border),
+                  Expanded(
+                    child: _ResultTile(
+                      label: _mode.resultLabel,
+                      value: size > 0 ? _formatResult(size) : '—',
+                      color: AppColors.primary,
+                      note: size > 0 ? _resultNote : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Risk Warning ──────────────────────────────────────────────────
+            if (_riskPct > 2)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.warningDim,
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.radiusSm),
+                    border: Border.all(
+                        color: AppColors.warning.withOpacity(0.3)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          color: AppColors.warning, size: 14),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Risking more than 2% per trade significantly increases account blow-up risk.',
+                          style:
+                              TextStyle(color: AppColors.warning, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        ),
       ),
     );
   }
 }
+
+// ── Reusable Widgets ──────────────────────────────────────────────────────────
 
 class _CalcField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final String? prefix;
   final String? suffix;
+  final String? hint;
   final ValueChanged<String> onChanged;
 
   const _CalcField({
@@ -327,6 +475,7 @@ class _CalcField extends StatelessWidget {
     required this.onChanged,
     this.prefix,
     this.suffix,
+    this.hint,
   });
 
   @override
@@ -344,8 +493,11 @@ class _CalcField extends StatelessWidget {
           fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
         labelStyle:
             const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        hintStyle:
+            const TextStyle(color: AppColors.textMuted, fontSize: 11),
         prefixText: prefix,
         suffixText: suffix,
         prefixStyle: const TextStyle(color: AppColors.textMuted),
@@ -427,8 +579,7 @@ class _ModeChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: selected
               ? AppColors.primary.withOpacity(0.15)
@@ -445,8 +596,7 @@ class _ModeChip extends StatelessWidget {
           style: TextStyle(
             color: selected ? AppColors.primary : AppColors.textSecondary,
             fontSize: 11,
-            fontWeight:
-                selected ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),

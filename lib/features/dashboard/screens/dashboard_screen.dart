@@ -12,11 +12,9 @@ import '../../../shared/widgets/charts/radar_chart_widget.dart';
 import '../../../shared/widgets/charts/trade_calendar_widget.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/premarket_checklist_provider.dart';
-import '../widgets/monthly_target_card.dart';
 import '../widgets/trade_highlight_card.dart';
 import '../widgets/weekly_summary_card.dart';
 import '../../../analytics/trade_analytics.dart';
-import '../../insights/widgets/insights_section.dart';
 import '../../insights/widgets/position_size_calculator.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -60,9 +58,6 @@ class DashboardScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            // ── AI Insights (P1) ─────────────────────────────────────────────
-            const InsightsSection(),
-            const SizedBox(height: AppSpacing.md),
             // ── Pre-Market Checklist ──────────────────────────────────────────
             _PremarketChecklistCard(state: checklist),
             const SizedBox(height: AppSpacing.md),
@@ -94,8 +89,6 @@ class DashboardScreen extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
               data: (stats) => Column(children: [
                 _streakBanner(stats),
-                const SizedBox(height: AppSpacing.md),
-                const MonthlyTargetCard(),
                 const SizedBox(height: AppSpacing.md),
                 // ── Streaks & Badges (P4) ────────────────────────────────
                 const StreamsAndBadgesSection(),
