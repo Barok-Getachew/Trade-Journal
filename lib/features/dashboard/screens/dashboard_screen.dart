@@ -15,6 +15,7 @@ import '../providers/premarket_checklist_provider.dart';
 import '../widgets/trade_highlight_card.dart';
 import '../widgets/weekly_summary_card.dart';
 import '../../../analytics/trade_analytics.dart';
+import '../../insights/widgets/insights_section.dart' show StreamsAndBadgesSection;
 import '../../insights/widgets/position_size_calculator.dart';
 
 class DashboardScreen extends ConsumerWidget {
