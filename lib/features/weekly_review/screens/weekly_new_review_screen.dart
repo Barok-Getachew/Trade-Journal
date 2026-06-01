@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../auth/providers/repository_providers.dart';
+import '../../narratives/providers/narrative_provider.dart';
 
 // ── Create new weekly review ──────────────────────────────────────────────────
 
@@ -21,6 +22,13 @@ class _WeeklyNewReviewScreenState
   DateTime _weekStart = _lastMonday();
   bool _saving = false;
 
+  // Narrative Reflection fields
+  final _reflScenarioCtrl = TextEditingController();
+  final _reflDayCtrl = TextEditingController();
+  final _reflCarryCtrl = TextEditingController();
+  bool? _reflAmdCorrect;
+  int _reflS5Count = 0;
+
   static DateTime _lastMonday() {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day)
@@ -28,9 +36,41 @@ class _WeeklyNewReviewScreenState
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadWeeklyNarrative();
+  }
+
+  Future<void> _loadWeeklyNarrative() async {
+    try {
+      final existing = await ref.read(narrativeRepositoryProvider).fetchWeeklyByDate(_weekStart);
+      if (existing != null && mounted) {
+        setState(() {
+          _reflScenarioCtrl.text = existing.reflScenarioPlayed ?? '';
+          _reflDayCtrl.text = existing.reflCleanestDay ?? '';
+          _reflCarryCtrl.text = existing.reflCarryForward ?? '';
+          _reflAmdCorrect = existing.reflAmdCorrect;
+          _reflS5Count = existing.reflCompleteS5Count ?? 0;
+        });
+      } else {
+        setState(() {
+          _reflScenarioCtrl.clear();
+          _reflDayCtrl.clear();
+          _reflCarryCtrl.clear();
+          _reflAmdCorrect = null;
+          _reflS5Count = 0;
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
   void dispose() {
     _reflCtrl.dispose();
     _goalsCtrl.dispose();
+    _reflScenarioCtrl.dispose();
+    _reflDayCtrl.dispose();
+    _reflCarryCtrl.dispose();
     super.dispose();
   }
 
@@ -68,12 +108,26 @@ class _WeeklyNewReviewScreenState
         'goals_next_week': _goalsCtrl.text.trim(),
       });
 
+      // Upsert weekly narrative reflection fields
+      await ref.read(narrativeRepositoryProvider).upsertWeekly({
+        'week_of': _weekStart.toIso8601String().substring(0, 10),
+        'refl_scenario_played': _reflScenarioCtrl.text.trim(),
+        'refl_amd_correct': _reflAmdCorrect,
+        'refl_cleanest_day': _reflDayCtrl.text.trim(),
+        'refl_complete_s5_count': _reflS5Count,
+        'refl_carry_forward': _reflCarryCtrl.text.trim(),
+      });
+
+      // Invalidate weekly narrative providers
+      ref.invalidate(thisWeekNarrativeProvider);
+      ref.invalidate(allWeeklyNarrativesProvider);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(totalTrades > 0
-                ? 'Weekly review saved ✓  ($totalTrades trades, ${(winRate * 100).toStringAsFixed(0)}% win rate)'
-                : 'Weekly review saved ✓  (no trades logged this week)'),
+                ? 'Weekly review and narrative reflection saved ✓  ($totalTrades trades, ${(winRate * 100).toStringAsFixed(0)}% win rate)'
+                : 'Weekly review and narrative reflection saved ✓  (no trades logged this week)'),
             backgroundColor: AppColors.profit,
           ),
         );
@@ -166,6 +220,7 @@ class _WeeklyNewReviewScreenState
                             setState(() => _weekStart =
                                 DateTime(monday.year, monday.month,
                                     monday.day));
+                            _loadWeeklyNarrative();
                           }
                         },
                         child: const Text('Change'),
@@ -216,6 +271,138 @@ class _WeeklyNewReviewScreenState
                 ),
 
                 const SizedBox(height: AppSpacing.lg),
+                const Divider(height: 32, color: AppColors.border),
+                const Text(
+                  'Weekly Narrative Reflection',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Review how this week\'s market played out compared to your pre-week narrative expectations.',
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Question 1: Which scenario played out?
+                _label('Which scenario played out?'),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _reflScenarioCtrl,
+                  maxLines: 2,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(
+                    hintText: 'Did Scenario A or Scenario B play out? Describe the delivery path...',
+                    hintStyle: TextStyle(color: AppColors.textMuted),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // Question 2: Was AMD phase correctly identified?
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Was the AMD (Accumulation-Manipulation-Distribution) phase correctly identified?',
+                          style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      _toggle('Yes', true, AppColors.profit),
+                      const SizedBox(width: 8),
+                      _toggle('No', false, AppColors.loss),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // Question 3: Cleanest setup day
+                _label('Which day had the cleanest setup?'),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _reflDayCtrl,
+                  maxLines: 1,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Wednesday London Session / Tuesday New York PM...',
+                    hintStyle: TextStyle(color: AppColors.textMuted),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // Question 4: Count of Sentence 5 complete before entry
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Number of trades with complete Sentence 5 before entry:',
+                          style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.remove_rounded, color: AppColors.textSecondary),
+                        onPressed: _reflS5Count > 0
+                            ? () => setState(() => _reflS5Count--)
+                            : null,
+                      ),
+                      Text(
+                        '$_reflS5Count',
+                        style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_rounded, color: AppColors.textSecondary),
+                        onPressed: () => setState(() => _reflS5Count++),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+
+                // Question 5: Carry forward
+                _label('What is the ONE thing to carry into next week?'),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _reflCarryCtrl,
+                  maxLines: 3,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(
+                    hintText: 'Rules adjustments, emotional control focus, schedule improvements...',
+                    hintStyle: TextStyle(color: AppColors.textMuted),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                const Divider(height: 32, color: AppColors.border),
+                const SizedBox(height: AppSpacing.sm),
 
                 _label('Goals for Next Week'),
                 const SizedBox(height: AppSpacing.sm),
@@ -276,4 +463,27 @@ class _WeeklyNewReviewScreenState
 
   String _fmt(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  Widget _toggle(String label, bool targetVal, Color color) {
+    final isSelected = _reflAmdCorrect == targetVal;
+    return GestureDetector(
+      onTap: () => setState(() => _reflAmdCorrect = isSelected ? null : targetVal),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: isSelected ? color : AppColors.border),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                color: isSelected ? color : AppColors.textMuted,
+                fontWeight: FontWeight.w700,
+                fontSize: 13)),
+      ),
+    );
+  }
 }

@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../domain/models/daily_review.dart';
 import '../../auth/providers/repository_providers.dart';
+import '../../narratives/providers/narrative_provider.dart';
 import '../providers/daily_review_provider.dart';
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
@@ -277,6 +278,12 @@ class _ReviewFormDialogState extends ConsumerState<_ReviewFormDialog> {
   int _discipline = 7;
   bool _saving = false;
 
+  // Post-trade narrative reflection fields
+  bool? _postS5Complete;
+  bool? _postDelivered;
+  final _postBreakdownCtrl = TextEditingController();
+  final _postPreparedCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -288,6 +295,23 @@ class _ReviewFormDialogState extends ConsumerState<_ReviewFormDialog> {
       _plan = e.planAdherence;
       _discipline = e.disciplineScore;
     }
+    _loadPostTradeNarrative();
+  }
+
+  Future<void> _loadPostTradeNarrative() async {
+    final today = DateTime.now();
+    final existing = await ref.read(narrativeRepositoryProvider).fetchDailyByDate(today);
+    if (existing != null && mounted) {
+      setState(() {
+        _postS5Complete = existing.postS5Complete;
+        _postDelivered = existing.postDelivered;
+        _postBreakdownCtrl.text = existing.postBreakdown ?? '';
+        _postPreparedCtrl.text = existing.postPreparedVersion ?? '';
+        if (_emotionCtrl.text.isEmpty && existing.postEmotionalState != null) {
+          _emotionCtrl.text = existing.postEmotionalState!;
+        }
+      });
+    }
   }
 
   @override
@@ -295,6 +319,8 @@ class _ReviewFormDialogState extends ConsumerState<_ReviewFormDialog> {
     _emotionCtrl.dispose();
     _wellCtrl.dispose();
     _mistakesCtrl.dispose();
+    _postBreakdownCtrl.dispose();
+    _postPreparedCtrl.dispose();
     super.dispose();
   }
 
@@ -339,13 +365,27 @@ class _ReviewFormDialogState extends ConsumerState<_ReviewFormDialog> {
         updatedAt: DateTime.now(),
       );
 
+      // Save Daily Review
       await ref.read(dailyReviewRepositoryProvider).upsert(review);
+
+      // Save Post-Trade Narrative
+      await ref.read(narrativeRepositoryProvider).upsertDaily({
+        'narrative_date': DateTime.now().toIso8601String().substring(0, 10),
+        'post_s5_complete': _postS5Complete,
+        'post_delivered': _postDelivered,
+        'post_breakdown': _postBreakdownCtrl.text.trim(),
+        'post_emotional_state': _emotionCtrl.text.trim(),
+        'post_prepared_version': _postPreparedCtrl.text.trim(),
+      });
+
+      // Invalidate both daily review and narrative providers
+      ref.invalidate(todayDailyNarrativeProvider);
       widget.onSaved();
 
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Daily review saved ✓'),
+          content: Text('Daily review and post-trade reflection saved ✓'),
           backgroundColor: AppColors.profit,
         ));
       }
@@ -448,6 +488,45 @@ class _ReviewFormDialogState extends ConsumerState<_ReviewFormDialog> {
                       onChanged: (v) =>
                           setState(() => _discipline = v),
                     ),
+                    const SizedBox(height: 16),
+                    const Divider(height: 32, color: AppColors.border),
+                    const Text(
+                      'Post-Trade Narrative Reflection',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Reflect on today\'s executions against your pre-session narrative.',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _YesNoRow(
+                      question: 'Was Sentence 5 written BEFORE price reached the zone?',
+                      value: _postS5Complete,
+                      onChanged: (v) => setState(() => _postS5Complete = v),
+                    ),
+                    const SizedBox(height: 12),
+                    _YesNoRow(
+                      question: 'Did price deliver as narrated?',
+                      value: _postDelivered,
+                      onChanged: (v) => setState(() => _postDelivered = v),
+                    ),
+                    const SizedBox(height: 16),
+                    _label('Where did the narrative break down (if at all)?', Icons.help_outline_rounded),
+                    const SizedBox(height: 8),
+                    _area(_postBreakdownCtrl, 'Describe the exact point where analysis diverged from price action...'),
+                    const SizedBox(height: 16),
+                    _label('What would the PREPARED version of this trade look like?', Icons.history_edu_rounded),
+                    const SizedBox(height: 8),
+                    _area(_postPreparedCtrl, 'If you could replay this with perfect preparation, what would you do differently?'),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -806,4 +885,66 @@ class _ReviewCardState extends State<_ReviewCard> {
         'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
       ][m - 1];
+}
+
+class _YesNoRow extends StatelessWidget {
+  final String question;
+  final bool? value;
+  final ValueChanged<bool?> onChanged;
+
+  const _YesNoRow({
+    required this.question,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(question,
+                style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          _toggle('Yes', true, AppColors.profit),
+          const SizedBox(width: 8),
+          _toggle('No', false, AppColors.loss),
+        ],
+      ),
+    );
+  }
+
+  Widget _toggle(String label, bool targetVal, Color color) {
+    final isSelected = value == targetVal;
+    return GestureDetector(
+      onTap: () => onChanged(isSelected ? null : targetVal),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: isSelected ? color : AppColors.border),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                color: isSelected ? color : AppColors.textMuted,
+                fontWeight: FontWeight.w700,
+                fontSize: 13)),
+      ),
+    );
+  }
 }
