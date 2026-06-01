@@ -17,6 +17,7 @@ import '../widgets/weekly_summary_card.dart';
 import '../../../analytics/trade_analytics.dart';
 import '../../insights/widgets/insights_section.dart' show StreamsAndBadgesSection;
 import '../../insights/widgets/position_size_calculator.dart';
+import '../../../features/narratives/providers/narrative_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -59,6 +60,15 @@ class DashboardScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
+            // ── Daily Narrative Prompt ────────────────────────────────────────
+            ref.watch(todayDailyNarrativeProvider).when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (n) {
+                if (n != null && n.preSessionComplete) return const SizedBox.shrink();
+                return _NarrativePromptCard(hasNarrative: n != null);
+              },
+            ),
             // ── Pre-Market Checklist ──────────────────────────────────────────
             _PremarketChecklistCard(state: checklist),
             const SizedBox(height: AppSpacing.md),
@@ -1334,6 +1344,73 @@ class _BlownAccountBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Narrative Prompt Card ─────────────────────────────────────────────────────
+
+class _NarrativePromptCard extends StatelessWidget {
+  final bool hasNarrative;
+  const _NarrativePromptCard({required this.hasNarrative});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.go('/daily-narrative'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF3D7EFF).withOpacity(0.12),
+              const Color(0xFF7C3AED).withOpacity(0.08),
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(color: const Color(0xFF3D7EFF).withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3D7EFF).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(Icons.edit_note_rounded,
+                  color: Color(0xFF3D7EFF), size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasNarrative
+                        ? "Today's Narrative — Incomplete"
+                        : "Write Today's Narrative",
+                    style: const TextStyle(
+                      color: Color(0xFF3D7EFF),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const Text(
+                    'Complete Sentence 5 before taking any trade.',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: Color(0xFF3D7EFF), size: 18),
+          ],
+        ),
       ),
     );
   }

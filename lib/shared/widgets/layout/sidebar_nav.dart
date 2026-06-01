@@ -71,6 +71,18 @@ const _navItems = [
     iconActive: Icons.security_rounded,
     route: '/risk-rules',
   ),
+  _NavItem(
+    label: 'Daily Narrative',
+    icon: Icons.edit_note_outlined,
+    iconActive: Icons.edit_note_rounded,
+    route: '/daily-narrative',
+  ),
+  _NavItem(
+    label: 'Weekly Narrative',
+    icon: Icons.psychology_outlined,
+    iconActive: Icons.psychology_rounded,
+    route: '/weekly-narrative-builder',
+  ),
 ];
 
 class SidebarNav extends ConsumerWidget {

@@ -17,6 +17,9 @@ import '../../features/accounts/screens/account_manager_screen.dart';
 import '../../features/accounts/screens/account_comparison_screen.dart';
 import '../../features/daily_review/screens/daily_review_screen.dart';
 import '../../features/risk_rules/screens/risk_rules_screen.dart';
+import '../../features/narratives/screens/daily_narrative_screen.dart';
+import '../../features/narratives/screens/weekly_narrative_screen.dart';
+import '../../features/narratives/screens/narrative_history_screen.dart';
 import '../../shared/widgets/layout/app_shell.dart';
 import '../../features/auth/screens/onboarding_screen.dart';
 import '../../features/accounts/providers/account_provider.dart';
@@ -144,6 +147,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/risk-rules',
             builder: (_, __) => const RiskRulesScreen(),
+          ),
+          GoRoute(
+            path: '/daily-narrative',
+            builder: (_, __) => const DailyNarrativeScreen(),
+          ),
+          GoRoute(
+            path: '/weekly-narrative-builder',
+            builder: (_, __) => const WeeklyNarrativeScreen(),
+          ),
+          GoRoute(
+            path: '/narrative-history',
+            builder: (_, __) => const NarrativeHistoryScreen(),
           ),
         ],
       ),

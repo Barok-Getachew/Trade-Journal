@@ -6,6 +6,7 @@ import '../../../data/repositories/storage_repository.dart';
 import '../../../data/repositories/daily_review_repository.dart';
 import '../../../data/repositories/risk_rule_repository.dart';
 import '../../../data/repositories/discipline_log_repository.dart';
+import '../../../data/repositories/narrative_repository.dart';
 import '../../auth/providers/auth_provider.dart';
 
 // ── Repository providers ──────────────────────────────────────────────────────
@@ -41,4 +42,8 @@ final riskRuleRepositoryProvider = Provider<RiskRuleRepository>((ref) {
 final disciplineLogRepositoryProvider =
     Provider<DisciplineLogRepository>((ref) {
   return DisciplineLogRepository(ref.watch(supabaseClientProvider));
+});
+
+final narrativeRepositoryProvider = Provider<NarrativeRepository>((ref) {
+  return NarrativeRepository(ref.watch(supabaseClientProvider));
 });

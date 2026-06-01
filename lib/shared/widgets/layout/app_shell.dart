@@ -194,7 +194,10 @@ class _MobileShell extends StatelessWidget {
   int _navIndexOf(String location) {
     if (location.startsWith('/trades')) return 1;
     if (location.startsWith('/analytics')) return 3;
-    if (location.startsWith('/daily-review') ||
+    if (location.startsWith('/daily-narrative') ||
+        location.startsWith('/weekly-narrative-builder') ||
+        location.startsWith('/narrative-history') ||
+        location.startsWith('/daily-review') ||
         location.startsWith('/weekly-review') ||
         location.startsWith('/accounts') ||
         location.startsWith('/risk-rules') ||
@@ -216,6 +219,9 @@ class _MobileShell extends StatelessWidget {
     if (location.startsWith('/weekly-review')) return 'Weekly Review';
     if (location.startsWith('/monthly-audit')) return 'Monthly Audit';
     if (location.startsWith('/risk-rules')) return 'Risk Rules';
+    if (location.startsWith('/daily-narrative')) return 'Daily Narrative';
+    if (location.startsWith('/weekly-narrative-builder')) return 'Weekly Narrative';
+    if (location.startsWith('/narrative-history')) return 'Narrative History';
     return 'Dashboard';
   }
 }
@@ -415,6 +421,25 @@ class _MoreSheet extends StatelessWidget {
             iconColor: AppColors.primary,
             onTap: () { Navigator.pop(context); context.go('/monthly-audit'); },
           ),
+          _sectionLabel('Narratives'),
+          _SheetTile(
+            icon: Icons.edit_note_rounded,
+            label: 'Daily Narrative',
+            iconColor: const Color(0xFF3D7EFF),
+            onTap: () { Navigator.pop(context); context.go('/daily-narrative'); },
+          ),
+          _SheetTile(
+            icon: Icons.psychology_rounded,
+            label: 'Weekly Narrative',
+            iconColor: const Color(0xFF7C3AED),
+            onTap: () { Navigator.pop(context); context.go('/weekly-narrative-builder'); },
+          ),
+          _SheetTile(
+            icon: Icons.history_rounded,
+            label: 'Narrative History',
+            iconColor: AppColors.textSecondary,
+            onTap: () { Navigator.pop(context); context.go('/narrative-history'); },
+          ),
           _sectionLabel('Settings'),
           _SheetTile(
             icon: Icons.account_balance_wallet_outlined,
@@ -565,6 +590,9 @@ class _AppBar extends ConsumerWidget {
     if (location.startsWith('/weekly-review')) return 'Weekly Review';
     if (location.startsWith('/monthly-audit')) return 'Monthly Audit';
     if (location.startsWith('/risk-rules')) return 'Risk Rules';
+    if (location.startsWith('/daily-narrative')) return 'Daily Narrative';
+    if (location.startsWith('/weekly-narrative-builder')) return 'Weekly Narrative';
+    if (location.startsWith('/narrative-history')) return 'Narrative History';
     return 'Dashboard';
   }
 
