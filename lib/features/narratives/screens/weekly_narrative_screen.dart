@@ -111,6 +111,24 @@ class _State extends ConsumerState<WeeklyNarrativeScreen>
           Text('Week of $weekStr', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
         ]),
         iconTheme: const IconThemeData(color: AppColors.textSecondary),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: TextButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.primary))
+                  : const Icon(Icons.check_rounded, color: AppColors.primary, size: 18),
+              label: const Text('Save',
+                  style: TextStyle(
+                      color: AppColors.primary, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           labelColor: AppColors.primary,
