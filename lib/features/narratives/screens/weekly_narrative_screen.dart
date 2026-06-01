@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../domain/models/weekly_narrative.dart';
@@ -130,6 +131,11 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.textSecondary),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history_rounded),
+            tooltip: 'Narrative History',
+            onPressed: () => context.push('/narrative-history'),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton.icon(
