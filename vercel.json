@@ -1,0 +1,33 @@
+{
+  "buildCommand": "bash vercel_build.sh",
+  "outputDirectory": "build/web",
+  "installCommand": "npm install",
+  "framework": null,
+  "routes": [
+    {
+      "src": "/flutter_service_worker.js",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate"
+      },
+      "dest": "/flutter_service_worker.js"
+    },
+    {
+      "src": "/flutter.js",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate"
+      },
+      "dest": "/flutter.js"
+    },
+    {
+      "src": "/index.html",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate"
+      },
+      "dest": "/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
