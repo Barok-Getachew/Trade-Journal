@@ -120,7 +120,7 @@ class _RiskRulesScreenState extends ConsumerState<RiskRulesScreen> {
   Widget build(BuildContext context) {
     final account = ref.watch(selectedAccountProvider);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

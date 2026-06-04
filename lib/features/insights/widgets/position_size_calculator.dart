@@ -178,7 +178,7 @@ class _PositionSizeSheetState extends ConsumerState<_PositionSizeSheet> {
         top: 40,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.vertical(
           top: const Radius.circular(AppSpacing.radiusXl),
           bottom: isMobile

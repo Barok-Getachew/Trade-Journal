@@ -35,17 +35,18 @@ class _DesktopShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final location = GoRouterState.of(context).matchedLocation;
     final isTradeForm = location == '/trades/new' ||
         (location.startsWith('/trades/') && location.endsWith('/edit'));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       floatingActionButton: isTradeForm
           ? null
           : FloatingActionButton.extended(
               onPressed: () => context.go('/trades/new'),
-              backgroundColor: AppColors.primary,
+              backgroundColor: c.primary,
               icon: const Icon(Icons.add_rounded, color: Colors.white),
               label: const Text(
                 'Log Trade',
@@ -81,13 +82,14 @@ class _MobileShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final location = GoRouterState.of(context).matchedLocation;
     final navIndex = _navIndexOf(location);
     final isSubPage = _isSubPage(location);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context, location, isSubPage),
+      backgroundColor: c.background,
+      appBar: _buildAppBar(context, location, isSubPage, c),
       body: ClipRect(child: child),
       bottomNavigationBar: _MobileBottomNav(
         currentIndex: navIndex,
@@ -97,17 +99,17 @@ class _MobileShell extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar(
-      BuildContext context, String location, bool isSubPage) {
+      BuildContext context, String location, bool isSubPage, ThemeColors c) {
     return AppBar(
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       elevation: 0,
       scrolledUnderElevation: 0,
       titleSpacing: isSubPage ? 4 : 16,
       automaticallyImplyLeading: false,
       leading: isSubPage
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: AppColors.textPrimary, size: 18),
+              icon: Icon(Icons.arrow_back_ios_new_rounded,
+                  color: c.textPrimary, size: 18),
               onPressed: () {
                 if (Navigator.of(context).canPop()) {
                   Navigator.of(context).pop();
@@ -119,8 +121,8 @@ class _MobileShell extends StatelessWidget {
           : null,
       title: Text(
         _getTitle(location),
-        style: const TextStyle(
-            color: AppColors.textPrimary,
+        style: TextStyle(
+            color: c.textPrimary,
             fontWeight: FontWeight.w700,
             fontSize: 17),
       ),
@@ -131,7 +133,7 @@ class _MobileShell extends StatelessWidget {
             return IconButton(
               icon: Icon(
                 isLight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                color: AppColors.textSecondary,
+                color: c.textSecondary,
                 size: 20,
               ),
               onPressed: () => ref.read(themeProvider.notifier).toggle(),
@@ -158,7 +160,7 @@ class _MobileShell extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                          color: AppColors.primary.withOpacity(0.35),
+                          color: AppColors.primary.withValues(alpha: 0.35),
                           blurRadius: 8,
                           offset: const Offset(0, 2)),
                     ],
@@ -177,7 +179,7 @@ class _MobileShell extends StatelessWidget {
       ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
-        child: Container(color: AppColors.border, height: 1),
+        child: Container(color: c.border, height: 1),
       ),
     );
   }
@@ -220,7 +222,8 @@ class _MobileShell extends StatelessWidget {
     if (location.startsWith('/monthly-audit')) return 'Monthly Audit';
     if (location.startsWith('/risk-rules')) return 'Risk Rules';
     if (location.startsWith('/daily-narrative')) return 'Daily Narrative';
-    if (location.startsWith('/weekly-narrative-builder')) return 'Weekly Narrative';
+    if (location.startsWith('/weekly-narrative-builder'))
+      return 'Weekly Narrative';
     if (location.startsWith('/narrative-history')) return 'Narrative History';
     return 'Dashboard';
   }
@@ -236,10 +239,11 @@ class _MobileBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border, width: 0.5)),
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(top: BorderSide(color: c.border, width: 0.5)),
       ),
       child: SafeArea(
         top: false,
@@ -280,7 +284,8 @@ class _MobileBottomNav extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.45),
+                            color:
+                                AppColors.primary.withValues(alpha: 0.45),
                             blurRadius: 16,
                             offset: const Offset(0, 4),
                           ),
@@ -343,8 +348,9 @@ class _NavTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final isActive = index == current;
-    final color = isActive ? AppColors.primary : AppColors.textMuted;
+    final color = isActive ? c.primary : c.textMuted;
 
     return Expanded(
       child: InkWell(
@@ -385,10 +391,11 @@ class _MoreSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -398,58 +405,82 @@ class _MoreSheet extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: AppColors.border,
+              color: c.border,
               borderRadius: BorderRadius.circular(99),
             ),
           ),
-          _sectionLabel('Reviews'),
+          _sectionLabel(context, 'Reviews'),
           _SheetTile(
             icon: Icons.today_rounded,
             label: 'Daily Review',
             iconColor: AppColors.primary,
-            onTap: () { Navigator.pop(context); context.go('/daily-review'); },
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/daily-review');
+            },
           ),
           _SheetTile(
             icon: Icons.date_range_rounded,
             label: 'Weekly Review',
             iconColor: AppColors.primary,
-            onTap: () { Navigator.pop(context); context.go('/weekly-review'); },
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/weekly-review');
+            },
           ),
           _SheetTile(
             icon: Icons.calendar_month_outlined,
             label: 'Monthly Audit',
             iconColor: AppColors.primary,
-            onTap: () { Navigator.pop(context); context.go('/monthly-audit'); },
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/monthly-audit');
+            },
           ),
-          _sectionLabel('Narratives'),
+          _sectionLabel(context, 'Narratives'),
           _SheetTile(
             icon: Icons.edit_note_rounded,
             label: 'Daily Narrative',
             iconColor: const Color(0xFF3D7EFF),
-            onTap: () { Navigator.pop(context); context.go('/daily-narrative'); },
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/daily-narrative');
+            },
           ),
           _SheetTile(
             icon: Icons.psychology_rounded,
             label: 'Weekly Narrative',
             iconColor: const Color(0xFF7C3AED),
-            onTap: () { Navigator.pop(context); context.go('/weekly-narrative-builder'); },
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/weekly-narrative-builder');
+            },
           ),
           _SheetTile(
             icon: Icons.history_rounded,
             label: 'Narrative History',
             iconColor: AppColors.textSecondary,
-            onTap: () { Navigator.pop(context); context.go('/narrative-history'); },
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/narrative-history');
+            },
           ),
-          _sectionLabel('Settings'),
+          _sectionLabel(context, 'Settings'),
           _SheetTile(
             icon: Icons.account_balance_wallet_outlined,
             label: 'Accounts',
-            onTap: () { Navigator.pop(context); context.go('/accounts'); },
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/accounts');
+            },
           ),
           _SheetTile(
             icon: Icons.shield_outlined,
             label: 'Risk Rules',
-            onTap: () { Navigator.pop(context); context.go('/risk-rules'); },
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/risk-rules');
+            },
           ),
           _SheetTile(
             icon: Icons.logout_rounded,
@@ -467,21 +498,24 @@ class _MoreSheet extends StatelessWidget {
     );
   }
 
-  Widget _sectionLabel(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            text.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-            ),
+  Widget _sectionLabel(BuildContext context, String text) {
+    final c = AppColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          text.toUpperCase(),
+          style: TextStyle(
+            color: c.textMuted,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.0,
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _SheetTile extends StatelessWidget {
@@ -501,6 +535,12 @@ class _SheetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final effectiveLabelColor =
+        labelColor == AppColors.textPrimary ? c.textPrimary : labelColor;
+    final effectiveIconColor =
+        iconColor == AppColors.textSecondary ? c.textSecondary : iconColor;
+
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -511,20 +551,20 @@ class _SheetTile extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: effectiveIconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: Icon(icon, color: iconColor, size: 18),
+              child: Icon(icon, color: effectiveIconColor, size: 18),
             ),
             const SizedBox(width: 14),
             Text(label,
                 style: TextStyle(
-                    color: labelColor,
+                    color: effectiveLabelColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w500)),
             const Spacer(),
             Icon(Icons.chevron_right_rounded,
-                color: AppColors.textMuted, size: 18),
+                color: c.textMuted, size: 18),
           ],
         ),
       ),
@@ -537,13 +577,13 @@ class _SheetTile extends StatelessWidget {
 class _AppBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final isLight = ref.watch(themeProvider) == ThemeMode.light;
     return Container(
       height: 60,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border:
-            Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+        color: c.surface,
+        border: Border(bottom: BorderSide(color: c.border)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Row(
@@ -558,13 +598,13 @@ class _AppBar extends ConsumerWidget {
               isLight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
               size: 18,
             ),
-            color: AppColors.textSecondary,
+            color: c.textSecondary,
             tooltip: isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode',
             onPressed: () => ref.read(themeProvider.notifier).toggle(),
           ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            color: AppColors.textSecondary,
+            color: c.textSecondary,
             tooltip: 'Refresh data',
             onPressed: () {},
           ),
@@ -591,14 +631,10 @@ class _AppBar extends ConsumerWidget {
     if (location.startsWith('/monthly-audit')) return 'Monthly Audit';
     if (location.startsWith('/risk-rules')) return 'Risk Rules';
     if (location.startsWith('/daily-narrative')) return 'Daily Narrative';
-    if (location.startsWith('/weekly-narrative-builder')) return 'Weekly Narrative';
+    if (location.startsWith('/weekly-narrative-builder'))
+      return 'Weekly Narrative';
     if (location.startsWith('/narrative-history')) return 'Narrative History';
     return 'Dashboard';
-  }
-
-  String _timeNow() {
-    final now = DateTime.now();
-    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
 }
 
@@ -627,7 +663,7 @@ class _UserAvatarChip extends ConsumerWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

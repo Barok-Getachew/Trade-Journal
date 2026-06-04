@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/print_service.dart';
 import '../../../domain/models/weekly_narrative.dart';
 import '../../auth/providers/repository_providers.dart';
 import '../providers/narrative_provider.dart';
 
 class WeeklyNarrativeScreen extends ConsumerStatefulWidget {
-  const WeeklyNarrativeScreen({super.key});
+  final DateTime? weekOf;
+  const WeeklyNarrativeScreen({super.key, this.weekOf});
 
   @override
   ConsumerState<WeeklyNarrativeScreen> createState() => _WeeklyNarrativeScreenState();
@@ -32,8 +34,12 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _weekOf = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    if (widget.weekOf != null) {
+      _weekOf = widget.weekOf!;
+    } else {
+      final now = DateTime.now();
+      _weekOf = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    }
     _load();
   }
 
@@ -109,11 +115,27 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
     }
   }
 
+  WeeklyNarrative _buildSnapshot() => WeeklyNarrative(
+        id: 'preview',
+        userId: '',
+        weekOf: _weekOf,
+        primaryInstrument: _instrCtrl.text.trim(),
+        highImpactNews: _newsCtrl.text.trim(),
+        step1Cot: _s1Ctrl.text.trim(),
+        step2HtfStructure: _s2Ctrl.text.trim(),
+        liquidityMap: _liqMap,
+        step4Amd: _s4Ctrl.text.trim(),
+        scenarioA: _saCtrl.text.trim(),
+        scenarioB: _sbCtrl.text.trim(),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
   @override
   Widget build(BuildContext context) {
     final weekStr = '${_weekOf.day}/${_weekOf.month}/${_weekOf.year}';
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         title: Column(
@@ -135,6 +157,16 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
             icon: const Icon(Icons.history_rounded),
             tooltip: 'Narrative History',
             onPressed: () => context.push('/narrative-history'),
+          ),
+          // ── Print / PDF button ─────────────────────────────────────────
+          IconButton(
+            icon: const Icon(Icons.print_rounded),
+            tooltip: 'Print / Save as PDF',
+            color: AppColors.textSecondary,
+            onPressed: () => PrintService.printWeeklyNarrative(
+              context: context,
+              narrative: _buildSnapshot(),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -267,7 +299,7 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
   Widget _stepCard(int n, String title, String guidance, String template, TextEditingController ctrl, Color color) {
     return Container(
       decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(color: AppColors.border)),
       child: Column(
@@ -349,7 +381,7 @@ class _LiquidityMapCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(color: AppColors.border)),
       child: Column(
@@ -485,7 +517,7 @@ class _ScenarioCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: Border.all(color: AppColors.border)),
       child: Column(

@@ -16,7 +16,7 @@ class NarrativeHistoryScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: AppColors.surface,
           title: const Text('Narrative History', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
@@ -83,6 +83,7 @@ class NarrativeHistoryScreen extends ConsumerWidget {
                           if (n.preWeekComplete) _badge('Plan ✓', AppColors.profit),
                           if (n.reflectionComplete) ...[const SizedBox(width: 4), _badge('Refl ✓', AppColors.primary)],
                         ]),
+                        onTap: () => context.push('/weekly-narrative-builder/history/${n.weekOf.toIso8601String().substring(0, 10)}'),
                       );
                     },
                   ),

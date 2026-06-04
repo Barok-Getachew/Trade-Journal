@@ -91,15 +91,16 @@ class SidebarNav extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final location = GoRouterState.of(context).matchedLocation;
     final accountsAsync = ref.watch(accountListProvider);
     final selected = ref.watch(selectedAccountProvider);
 
     return Container(
       width: AppSpacing.sidebarWidth,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(right: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: c.surface,
+        border: Border(right: BorderSide(color: c.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,14 +131,14 @@ class SidebarNav extends ConsumerWidget {
                 Text(
                   'TradeOS',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
               ],
             ),
           ),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: c.border, height: 1),
 
           // ── Account switcher ──────────────────────────────────────────────
           Padding(
@@ -155,11 +156,11 @@ class SidebarNav extends ConsumerWidget {
               error: (_, __) => const SizedBox.shrink(),
               data: (accounts) {
                 final items = <DropdownMenuItem<String>>[
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: '__all__',
                     child: Text('All Accounts',
                         style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 12)),
+                            color: c.textSecondary, fontSize: 12)),
                   ),
                   ...accounts.map(
                     (a) => DropdownMenuItem(
@@ -170,8 +171,8 @@ class SidebarNav extends ConsumerWidget {
                         Expanded(
                           child: Text(a.name,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: AppColors.textPrimary, fontSize: 12)),
+                              style: TextStyle(
+                                  color: c.textPrimary, fontSize: 12)),
                         ),
                       ]),
                     ),
@@ -179,7 +180,7 @@ class SidebarNav extends ConsumerWidget {
                 ];
                 return DropdownButtonFormField<String>(
                   value: selected == null ? '__all__' : selected.id,
-                  dropdownColor: AppColors.surface,
+                  dropdownColor: c.surface,
                   isExpanded: true,
                   decoration: InputDecoration(
                     contentPadding:
@@ -187,11 +188,11 @@ class SidebarNav extends ConsumerWidget {
                     isDense: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: c.border),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: c.border),
                     ),
                   ),
                   items: items,
@@ -209,7 +210,7 @@ class SidebarNav extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: c.border, height: 1),
           const SizedBox(height: AppSpacing.sm),
 
           // ── Nav items ──────────────────────────────────────────────────────
@@ -223,7 +224,7 @@ class SidebarNav extends ConsumerWidget {
             ),
           ),
 
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: c.border, height: 1),
 
           // ── User profile tile ──────────────────────────────────────────────
           _UserProfileTile(),
@@ -251,6 +252,7 @@ class SidebarNav extends ConsumerWidget {
 class _UserProfileTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     final email = ref.watch(userEmailProvider);
     final initial = ref.watch(userInitialProvider);
 
@@ -258,21 +260,21 @@ class _UserProfileTile extends ConsumerWidget {
       padding: const EdgeInsets.all(AppSpacing.sm),
       child: PopupMenuButton<_UserAction>(
         offset: const Offset(0, -120),
-        color: AppColors.surfaceElevated,
+        color: c.surfaceElevated,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: c.border),
         ),
         itemBuilder: (_) => [
           PopupMenuItem(
             value: _UserAction.profile,
             child: Row(children: [
-              const Icon(Icons.manage_accounts_rounded,
-                  size: 18, color: AppColors.textSecondary),
+              Icon(Icons.manage_accounts_rounded,
+                  size: 18, color: c.textSecondary),
               const SizedBox(width: 10),
-              const Text('Profile & Settings',
+              Text('Profile & Settings',
                   style: TextStyle(
-                      color: AppColors.textPrimary, fontSize: 13)),
+                      color: c.textPrimary, fontSize: 13)),
             ]),
           ),
           const PopupMenuDivider(),
@@ -301,9 +303,9 @@ class _UserProfileTile extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.surfaceElevated,
+            color: c.surfaceElevated,
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: c.border),
           ),
           child: Row(
             children: [
@@ -311,8 +313,8 @@ class _UserProfileTile extends ConsumerWidget {
               Container(
                 width: 32,
                 height: 32,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
                     colors: [AppColors.primary, AppColors.primaryLight],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -338,21 +340,21 @@ class _UserProfileTile extends ConsumerWidget {
                     Text(
                       email,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary,
+                      style: TextStyle(
+                          color: c.textPrimary,
                           fontSize: 11,
                           fontWeight: FontWeight.w500),
                     ),
-                    const Text(
+                    Text(
                       'Trader',
                       style: TextStyle(
-                          color: AppColors.textMuted, fontSize: 10),
+                          color: c.textMuted, fontSize: 10),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.unfold_more_rounded,
-                  size: 16, color: AppColors.textMuted),
+              Icon(Icons.unfold_more_rounded,
+                  size: 16, color: c.textMuted),
             ],
           ),
         ),
@@ -361,28 +363,28 @@ class _UserProfileTile extends ConsumerWidget {
   }
 
   void _confirmSignOut(BuildContext context, WidgetRef ref) {
+    final c = AppColors.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
+        backgroundColor: c.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: c.border),
         ),
-        title: const Text('Sign Out',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text('Are you sure you want to sign out?',
-            style: TextStyle(color: AppColors.textSecondary)),
+        title: Text('Sign Out',
+            style: TextStyle(color: c.textPrimary)),
+        content: Text('Are you sure you want to sign out?',
+            style: TextStyle(color: c.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: c.textSecondary)),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              // Clean up state before signing out
               ref.read(selectedAccountProvider.notifier).state = null;
               ref.invalidate(accountListProvider);
               await Supabase.instance.client.auth.signOut();
@@ -415,17 +417,18 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
         vertical: 2,
       ),
       child: Material(
-        color: isActive ? AppColors.primaryDim : Colors.transparent,
+        color: isActive ? c.primaryDim : Colors.transparent,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         child: InkWell(
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          hoverColor: AppColors.surfaceHighlight,
+          hoverColor: c.surfaceHighlight,
           onTap: () => context.go(item.route),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -436,8 +439,7 @@ class _SidebarItem extends StatelessWidget {
               children: [
                 Icon(
                   isActive ? item.iconActive : item.icon,
-                  color:
-                      isActive ? AppColors.primary : AppColors.textSecondary,
+                  color: isActive ? c.primary : c.textSecondary,
                   size: 20,
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -445,9 +447,7 @@ class _SidebarItem extends StatelessWidget {
                   child: Text(
                     item.label,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: isActive
-                              ? AppColors.primaryLight
-                              : AppColors.textSecondary,
+                          color: isActive ? c.primary : c.textSecondary,
                           fontWeight:
                               isActive ? FontWeight.w600 : FontWeight.w400,
                         ),
@@ -457,8 +457,8 @@ class _SidebarItem extends StatelessWidget {
                   Container(
                     width: 4,
                     height: 4,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
+                    decoration: BoxDecoration(
+                      color: c.primary,
                       shape: BoxShape.circle,
                     ),
                   ),

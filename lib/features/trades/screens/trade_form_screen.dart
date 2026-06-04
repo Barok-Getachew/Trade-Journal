@@ -638,7 +638,7 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
     final form = ref.watch(tradeFormProvider);
     final notifier = ref.read(tradeFormProvider.notifier);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           _TopBar(
@@ -916,9 +916,9 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         height: 60,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        decoration: const BoxDecoration(
-            color: AppColors.surface,
-            border: Border(bottom: BorderSide(color: AppColors.border))),
+        decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: const Border(bottom: BorderSide(color: AppColors.border))),
         child: Row(children: [
           IconButton(
               icon: const Icon(Icons.close_rounded),
@@ -950,9 +950,9 @@ class _StepSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: 200,
-        decoration: const BoxDecoration(
-            color: AppColors.surface,
-            border: Border(right: BorderSide(color: AppColors.border))),
+        decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: const Border(right: BorderSide(color: AppColors.border))),
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           children: steps.asMap().entries.map((e) {
@@ -1053,9 +1053,9 @@ class _PreviewPanel extends StatelessWidget {
 
     return Container(
       width: 210,
-      decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border(left: BorderSide(color: AppColors.border))),
+      decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: const Border(left: BorderSide(color: AppColors.border))),
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('PREVIEW',
@@ -1151,9 +1151,9 @@ class _BottomNav extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xl, vertical: AppSpacing.md),
-        decoration: const BoxDecoration(
-            color: AppColors.surface,
-            border: Border(top: BorderSide(color: AppColors.border))),
+        decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: const Border(top: BorderSide(color: AppColors.border))),
         child: Row(children: [
           if (step > 0)
             OutlinedButton.icon(

@@ -151,10 +151,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/daily-narrative',
             builder: (_, __) => const DailyNarrativeScreen(),
+            routes: [
+              GoRoute(
+                path: 'history/:date',
+                builder: (_, state) {
+                  final dateStr = state.pathParameters['date']!;
+                  final parsedDate = DateTime.tryParse(dateStr) ?? DateTime.now();
+                  return DailyNarrativeScreen(date: parsedDate);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/weekly-narrative-builder',
             builder: (_, __) => const WeeklyNarrativeScreen(),
+            routes: [
+              GoRoute(
+                path: 'history/:date',
+                builder: (_, state) {
+                  final dateStr = state.pathParameters['date']!;
+                  final parsedDate = DateTime.tryParse(dateStr) ?? DateTime.now();
+                  return WeeklyNarrativeScreen(weekOf: parsedDate);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/narrative-history',

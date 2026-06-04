@@ -19,7 +19,7 @@ class AccountManagerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountListProvider);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -115,9 +115,9 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.md),
-        decoration: const BoxDecoration(
-            color: AppColors.surface,
-            border: Border(bottom: BorderSide(color: AppColors.border))),
+        decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: const Border(bottom: BorderSide(color: AppColors.border))),
         child: Row(children: [
           const Text('Trading Accounts',
               style: TextStyle(
@@ -269,7 +269,7 @@ class _AccountTile extends StatelessWidget {
         ),
         // Actions
         PopupMenuButton<String>(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           icon: const Icon(Icons.more_vert_rounded,
               color: AppColors.textSecondary),
           onSelected: (v) {

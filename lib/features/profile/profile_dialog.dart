@@ -85,7 +85,7 @@ class _ProfileDialogState extends ConsumerState<_ProfileDialog> {
         constraints: const BoxConstraints(maxWidth: 460),
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
             border: Border.all(color: AppColors.border),
             boxShadow: [

@@ -204,7 +204,7 @@ class _TradesScreenState extends ConsumerState<TradesScreen> {
                 return Container(
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     border: Border.all(color: AppColors.border),
                   ),
@@ -252,7 +252,7 @@ class _TradesScreenState extends ConsumerState<TradesScreen> {
                   vertical: AppSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   border: Border.all(color: AppColors.border),
                 ),
@@ -562,7 +562,7 @@ class _MobileTradeCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             border: Border.all(color: AppColors.border),
           ),

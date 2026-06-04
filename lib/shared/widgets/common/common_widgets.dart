@@ -18,11 +18,12 @@ class PnlText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final color = value > 0
-        ? AppColors.profit
+        ? c.profit
         : value < 0
-        ? AppColors.loss
-        : AppColors.textSecondary;
+            ? c.loss
+            : c.textSecondary;
 
     final defaultFmt =
         formatter ??
@@ -48,16 +49,17 @@ class DirectionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isLong ? AppColors.profitDim : AppColors.lossDim,
+        color: isLong ? c.profitDim : c.lossDim,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         isLong ? '▲ LONG' : '▼ SHORT',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: isLong ? AppColors.profit : AppColors.loss,
+          color: isLong ? c.profit : c.loss,
           fontWeight: FontWeight.w700,
           fontSize: 10,
           letterSpacing: 0.5,
@@ -74,16 +76,17 @@ class DisciplineBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: rulesFollowed ? AppColors.profitDim : AppColors.lossDim,
+        color: rulesFollowed ? c.profitDim : c.lossDim,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         rulesFollowed ? '✓ Followed' : '✗ Broken',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: rulesFollowed ? AppColors.profit : AppColors.loss,
+          color: rulesFollowed ? c.profit : c.loss,
           fontWeight: FontWeight.w600,
           fontSize: 10,
         ),
@@ -132,6 +135,7 @@ class _LoadingShimmerState extends State<LoadingShimmer>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return AnimatedBuilder(
       animation: _anim,
       builder: (_, __) => Container(
@@ -141,9 +145,9 @@ class _LoadingShimmerState extends State<LoadingShimmer>
           borderRadius: BorderRadius.circular(widget.borderRadius),
           gradient: LinearGradient(
             colors: [
-              AppColors.surface,
-              AppColors.surfaceElevated,
-              AppColors.surface,
+              c.surface,
+              c.surfaceElevated,
+              c.surface,
             ],
             stops: [0, _anim.value, 1],
           ),
@@ -170,17 +174,19 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: AppColors.textMuted, size: 48),
+          Icon(icon, color: c.textMuted, size: 48),
           const SizedBox(height: 16),
           Text(
             title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(color: c.textSecondary),
           ),
           if (message != null) ...[
             const SizedBox(height: 6),

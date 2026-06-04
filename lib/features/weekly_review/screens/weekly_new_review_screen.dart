@@ -155,7 +155,7 @@ class _WeeklyNewReviewScreenState
         '${_fmt(_weekStart)} – ${_fmt(weekEnd)}';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         title: const Text('New Weekly Review',

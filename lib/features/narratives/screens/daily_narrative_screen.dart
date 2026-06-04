@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/print_service.dart';
 import '../../../data/repositories/narrative_repository.dart';
+import '../../../domain/models/daily_narrative.dart';
 import '../../auth/providers/repository_providers.dart';
 import '../providers/narrative_provider.dart';
 
@@ -97,13 +99,29 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
     }
   }
 
+  /// Build a snapshot of the current form state as a DailyNarrative for printing
+  DailyNarrative _buildSnapshot() => DailyNarrative(
+        id: 'preview',
+        userId: '',
+        narrativeDate: _date,
+        pair: _pairCtrl.text.trim(),
+        session: _sessionCtrl.text.trim(),
+        s1HtfBias: _s1Ctrl.text.trim(),
+        s2PriceAction: _s2Ctrl.text.trim(),
+        s3LiquidityDraw: _s3Ctrl.text.trim(),
+        s4Path: _s4Ctrl.text.trim(),
+        s5Execution: _s5Ctrl.text.trim(),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
   @override
   Widget build(BuildContext context) {
     final dateStr =
         '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         title: Column(
@@ -125,6 +143,16 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
             icon: const Icon(Icons.history_rounded),
             tooltip: 'Narrative History',
             onPressed: () => context.push('/narrative-history'),
+          ),
+          // ── Print / PDF button ─────────────────────────────────────────
+          IconButton(
+            icon: const Icon(Icons.print_rounded),
+            tooltip: 'Print / Save as PDF',
+            color: AppColors.textSecondary,
+            onPressed: () => PrintService.printDailyNarrative(
+              context: context,
+              narrative: _buildSnapshot(),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -357,7 +385,7 @@ class _SentenceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         border: Border.all(color: AppColors.border),
       ),

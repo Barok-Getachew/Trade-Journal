@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/print_service.dart';
 import '../../../shared/widgets/cards/glass_card.dart';
 import '../../../shared/widgets/common/common_widgets.dart';
 import '../../auth/providers/repository_providers.dart';
@@ -55,6 +56,17 @@ class TradeDetailScreen extends ConsumerWidget {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const Spacer(),
+                    // ── Print / PDF button ───────────────────────────
+                    IconButton(
+                      icon: const Icon(Icons.print_rounded,
+                          color: AppColors.textSecondary, size: 20),
+                      tooltip: 'Print / Save as PDF',
+                      onPressed: () => PrintService.printTrade(
+                        context: context,
+                        trade: trade,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.edit_outlined, size: 14),
                       label: const Text('Edit'),

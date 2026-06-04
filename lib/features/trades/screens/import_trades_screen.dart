@@ -76,7 +76,7 @@ class _ImportTradesScreenState extends ConsumerState<ImportTradesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Import Trades'),
         backgroundColor: AppColors.surface,
@@ -132,7 +132,7 @@ class _ImportTradesScreenState extends ConsumerState<ImportTradesScreen> {
                           width: 2,
                           style: BorderStyle.solid), // Simplified for brevity
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      color: AppColors.surface,
+                      color: Theme.of(context).colorScheme.surface,
                     ),
                     child: Column(
                       children: [
@@ -162,7 +162,7 @@ class _ImportTradesScreenState extends ConsumerState<ImportTradesScreen> {
                   const SizedBox(height: AppSpacing.sm),
                   Container(
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                       border: Border.all(color: AppColors.border),
                     ),

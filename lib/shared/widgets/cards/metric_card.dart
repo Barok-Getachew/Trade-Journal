@@ -59,7 +59,8 @@ class _MetricCardState extends State<MetricCard>
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = widget.iconColor ?? AppColors.primary;
+    final c = AppColors.of(context);
+    final iconColor = widget.iconColor ?? c.primary;
 
     return FadeTransition(
       opacity: _fade,
@@ -68,67 +69,71 @@ class _MetricCardState extends State<MetricCard>
         child: MouseRegion(
           onEnter: (_) => setState(() => _hovered = true),
           onExit: (_) => setState(() => _hovered = false),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: _hovered ? AppColors.surfaceHighlight : AppColors.surface,
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              border: Border.all(
-                color: _hovered ? AppColors.borderLight : AppColors.border,
-              ),
-              boxShadow: _hovered
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : [],
-            ),
-            padding: const EdgeInsets.all(AppSpacing.cardPadding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: iconColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusMd,
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              decoration: BoxDecoration(
+                color: _hovered ? c.surfaceHighlight : c.surface,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(
+                  color: _hovered ? c.borderLight : c.border,
+                ),
+                boxShadow: _hovered
+                    ? [
+                        BoxShadow(
+                          color: c.primary.withValues(alpha: 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
                         ),
+                      ]
+                    : [],
+              ),
+              padding: const EdgeInsets.all(AppSpacing.cardPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: iconColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
+                        ),
+                        child: Icon(widget.icon, color: iconColor, size: 18),
                       ),
-                      child: Icon(widget.icon, color: iconColor, size: 18),
-                    ),
-                    const Spacer(),
-                    if (widget.trailing != null) widget.trailing!,
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  widget.value,
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    color: widget.valueColor ?? AppColors.textPrimary,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
+                      const Spacer(),
+                      if (widget.trailing != null) widget.trailing!,
+                    ],
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.label,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                if (widget.subtitle != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    widget.value,
+                    style:
+                        Theme.of(context).textTheme.displayMedium?.copyWith(
+                              color: widget.valueColor ?? c.textPrimary,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                            ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
-                    widget.subtitle!,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    widget.label,
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
+                  if (widget.subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.subtitle!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
