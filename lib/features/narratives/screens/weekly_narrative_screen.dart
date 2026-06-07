@@ -133,25 +133,26 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final weekStr = '${_weekOf.day}/${_weekOf.month}/${_weekOf.year}';
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: c.surface,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Weekly Narrative Builder',
+            Text('Weekly Narrative Builder',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 16)),
             Text('Pre-Week Plan for Week of $weekStr',
-                style: const TextStyle(
-                    color: AppColors.textMuted, fontSize: 12)),
+                style: TextStyle(
+                    color: c.textMuted, fontSize: 12)),
           ],
         ),
-        iconTheme: const IconThemeData(color: AppColors.textSecondary),
+        iconTheme: IconThemeData(color: c.textSecondary),
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
@@ -162,7 +163,7 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
           IconButton(
             icon: const Icon(Icons.print_rounded),
             tooltip: 'Print / Save as PDF',
-            color: AppColors.textSecondary,
+            color: c.textSecondary,
             onPressed: () => PrintService.printWeeklyNarrative(
               context: context,
               narrative: _buildSnapshot(),
@@ -173,15 +174,15 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
             child: TextButton.icon(
               onPressed: _saving ? null : _save,
               icon: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.primary))
-                  : const Icon(Icons.check_rounded, color: AppColors.primary, size: 18),
-              label: const Text('Save',
+                          strokeWidth: 2, color: c.primary))
+                  : Icon(Icons.check_rounded, color: c.primary, size: 18),
+              label: Text('Save',
                   style: TextStyle(
-                      color: AppColors.primary, fontWeight: FontWeight.w700)),
+                      color: c.primary, fontWeight: FontWeight.w700)),
             ),
           ),
         ],
@@ -272,45 +273,49 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
     );
   }
 
-  Widget _field(TextEditingController ctrl, String label, String hint) => TextField(
-        controller: ctrl,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          labelStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-          hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-          filled: true,
-          fillColor: AppColors.surfaceElevated,
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              borderSide: const BorderSide(color: AppColors.border)),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              borderSide: const BorderSide(color: AppColors.border)),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-        ),
-      );
+  Widget _field(TextEditingController ctrl, String label, String hint) {
+    final c = AppColors.of(context);
+    return TextField(
+      controller: ctrl,
+      style: TextStyle(color: c.textPrimary, fontSize: 13),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        labelStyle: TextStyle(color: c.textSecondary, fontSize: 12),
+        hintStyle: TextStyle(color: c.textMuted, fontSize: 11),
+        filled: true,
+        fillColor: c.surfaceElevated,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            borderSide: BorderSide(color: c.border)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            borderSide: BorderSide(color: c.border)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+      ),
+    );
+  }
 
   Widget _stepCard(int n, String title, String guidance, String template, TextEditingController ctrl, Color color) {
+    final c = AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: c.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(color: AppColors.border)),
+          border: Border.all(color: c.border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
             decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
+                color: color.withValues(alpha: 0.08),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusMd)),
-                border: Border(bottom: BorderSide(color: color.withOpacity(0.2)))),
+                border: Border(bottom: BorderSide(color: color.withValues(alpha: 0.2)))),
             child: Row(
               children: [
                 Container(
@@ -330,33 +335,33 @@ class _WeeklyNarrativeScreenState extends ConsumerState<WeeklyNarrativeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(guidance, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontStyle: FontStyle.italic)),
+                Text(guidance, style: TextStyle(color: c.textSecondary, fontSize: 12, fontStyle: FontStyle.italic)),
                 const SizedBox(height: 8),
                 Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                        color: AppColors.surfaceElevated,
+                        color: c.surfaceElevated,
                         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                        border: Border.all(color: color.withOpacity(0.15))),
-                    child: Text(template, style: TextStyle(color: color.withOpacity(0.8), fontSize: 11, fontStyle: FontStyle.italic))),
+                        border: Border.all(color: color.withValues(alpha: 0.15))),
+                    child: Text(template, style: TextStyle(color: color.withValues(alpha: 0.85), fontSize: 11, fontStyle: FontStyle.italic))),
                 const SizedBox(height: AppSpacing.sm),
                 TextField(
                   controller: ctrl,
                   maxLines: 4,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                  style: TextStyle(color: c.textPrimary, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Write your analysis...',
-                    hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
                     filled: true,
-                    fillColor: AppColors.surfaceElevated,
+                    fillColor: c.surfaceElevated,
                     isDense: true,
                     contentPadding: const EdgeInsets.all(12),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                        borderSide: const BorderSide(color: AppColors.border)),
+                        borderSide: BorderSide(color: c.border)),
                     enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                        borderSide: const BorderSide(color: AppColors.border)),
+                        borderSide: BorderSide(color: c.border)),
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                         borderSide: BorderSide(color: color, width: 1.5)),
@@ -379,20 +384,21 @@ class _LiquidityMapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: c.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(color: AppColors.border)),
+          border: Border.all(color: c.border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
             decoration: BoxDecoration(
-                color: const Color(0xFFD97706).withOpacity(0.08),
+                color: const Color(0xFFD97706).withValues(alpha: 0.08),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSpacing.radiusMd)),
-                border: Border(bottom: BorderSide(color: const Color(0xFFD97706).withOpacity(0.2)))),
+                border: Border(bottom: BorderSide(color: const Color(0xFFD97706).withValues(alpha: 0.2)))),
             child: Row(
               children: [
                 Container(
@@ -411,22 +417,22 @@ class _LiquidityMapCard extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               children: [
-                const Row(
+                Row(
                   children: [
                     Expanded(
                         flex: 3,
                         child: Text('Type',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w700))),
-                    SizedBox(width: 8),
+                            style: TextStyle(color: c.textMuted, fontSize: 11, fontWeight: FontWeight.w700))),
+                    const SizedBox(width: 8),
                     Expanded(
                         flex: 2,
                         child: Text('Level',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w700))),
-                    SizedBox(width: 8),
+                            style: TextStyle(color: c.textMuted, fontSize: 11, fontWeight: FontWeight.w700))),
+                    const SizedBox(width: 8),
                     Expanded(
                         flex: 3,
                         child: Text('Notes',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w700))),
+                            style: TextStyle(color: c.textMuted, fontSize: 11, fontWeight: FontWeight.w700))),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -487,25 +493,28 @@ class _LiqRowState extends State<_LiqRow> {
     );
   }
 
-  Widget _mini(TextEditingController c, String hint, ValueChanged<String> cb) => TextField(
-        controller: c,
-        onChanged: cb,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-          filled: true,
-          fillColor: AppColors.surfaceElevated,
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: AppColors.border)),
-          enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: AppColors.border)),
-          focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
-        ),
-      );
+  Widget _mini(TextEditingController ctrl, String hint, ValueChanged<String> cb) {
+    final c = AppColors.of(context);
+    return TextField(
+      controller: ctrl,
+      onChanged: cb,
+      style: TextStyle(color: c.textPrimary, fontSize: 12),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: c.textMuted, fontSize: 11),
+        filled: true,
+        fillColor: c.surfaceElevated,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: c.border)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: c.border)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+      ),
+    );
+  }
 }
 
 class _ScenarioCard extends StatelessWidget {
@@ -514,28 +523,31 @@ class _ScenarioCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: c.surface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(color: AppColors.border)),
+          border: Border.all(color: c.border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Step 5 — The Two Scenarios',
-              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+          Text('Step 5 — The Two Scenarios',
+              style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
           const SizedBox(height: 4),
-          const Text('Write both before the week starts. Do not add a third.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontStyle: FontStyle.italic)),
+          Text('Write both before the week starts. Do not add a third.',
+              style: TextStyle(color: c.textMuted, fontSize: 11, fontStyle: FontStyle.italic)),
           const SizedBox(height: AppSpacing.md),
           _scenario(
+              context,
               'Scenario A — Bullish/Bearish',
               '"If price [does what] at [level], the narrative confirms [direction] and I will look for entries on the [timeframe] targeting [level]."',
               saCtrl,
               AppColors.profit),
           const SizedBox(height: AppSpacing.md),
           _scenario(
+              context,
               'Scenario B — Bullish/Bearish',
               '"If price [does what] at [level] first, the narrative shifts to [direction] and I will look for entries on the [timeframe] targeting [level]."',
               sbCtrl,
@@ -545,31 +557,33 @@ class _ScenarioCard extends StatelessWidget {
     );
   }
 
-  Widget _scenario(String label, String hint, TextEditingController ctrl, Color color) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
-        const SizedBox(height: 6),
-        TextField(
-          controller: ctrl,
-          maxLines: 3,
-          style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-            filled: true,
-            fillColor: AppColors.surfaceElevated,
-            isDense: true,
-            contentPadding: const EdgeInsets.all(12),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                borderSide: const BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                borderSide: const BorderSide(color: AppColors.border)),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                borderSide: BorderSide(color: color, width: 1.5)),
-          ),
+  Widget _scenario(BuildContext context, String label, String hint, TextEditingController ctrl, Color color) {
+    final c = AppColors.of(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+      const SizedBox(height: 6),
+      TextField(
+        controller: ctrl,
+        maxLines: 3,
+        style: TextStyle(color: c.textPrimary, fontSize: 13),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: c.textMuted, fontSize: 11),
+          filled: true,
+          fillColor: c.surfaceElevated,
+          isDense: true,
+          contentPadding: const EdgeInsets.all(12),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              borderSide: BorderSide(color: c.border)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              borderSide: BorderSide(color: c.border)),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              borderSide: BorderSide(color: color, width: 1.5)),
         ),
-      ]);
+      ),
+    ]);
+  }
 }

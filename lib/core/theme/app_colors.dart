@@ -146,25 +146,35 @@ class ThemeColors {
     borderLight: Color(0xFF2A3144),
   );
 
-  // ── Light palette ─────────────────────────────────────────────────────────
+  // ── Light palette ──────────────────────────────────────────────────
+  // Premium, warm-tinted light mode — never pure white, always has depth
   static const light = ThemeColors._(
-    background: Color(0xFFF0F4FB),
-    surface: Color(0xFFFFFFFF),
-    surfaceElevated: Color(0xFFF5F8FF),
-    surfaceHighlight: Color(0xFFEBF0FB),
+    // Warm blue-gray page background — the "paper" the app sits on
+    background: Color(0xFFE8EDF8),
+    // Slightly warm off-white card/panel surface — not blinding white
+    surface: Color(0xFFF8F9FC),
+    // Elevated surface — slightly cooler tint to separate layers
+    surfaceElevated: Color(0xFFEEF2FB),
+    // Highlight — perceptible blue tint for hover/active states
+    surfaceHighlight: Color(0xFFE2E9F8),
+    // Primary stays consistent
     primary: Color(0xFF3D7EFF),
     primaryLight: Color(0xFF6B9FFF),
+    // Soft blue tint for active/selected backgrounds
     primaryDim: Color(0xFFD6E4FF),
-    profit: Color(0xFF00A85A),
-    profitDim: Color(0xFFDCF7EC),
-    loss: Color(0xFFE5252F),
-    lossDim: Color(0xFFFFE8E9),
+    // Financial — rich, accessible colours against the warm surface
+    profit: Color(0xFF059669),
+    profitDim: Color(0xFFCCF4E3),
+    loss: Color(0xFFDC2626),
+    lossDim: Color(0xFFFFDDDD),
     warning: Color(0xFFD97706),
-    warningDim: Color(0xFFFFF3DB),
-    textPrimary: Color(0xFF0D1117),
-    textSecondary: Color(0xFF4A5568),
-    textMuted: Color(0xFF8892A4),
-    border: Color(0xFFE2E8F0),
-    borderLight: Color(0xFFCBD5E0),
+    warningDim: Color(0xFFFEF0C7),
+    // Text — deep charcoal for high contrast, not harsh pure black
+    textPrimary: Color(0xFF111827),
+    textSecondary: Color(0xFF374151),
+    textMuted: Color(0xFF6B7280),
+    // Borders — subtle but clearly visible on the warm surfaces
+    border: Color(0xFFC8D3E8),
+    borderLight: Color(0xFFB0BFD8),
   );
 }

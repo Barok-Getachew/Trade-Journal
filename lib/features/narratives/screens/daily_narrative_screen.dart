@@ -117,27 +117,28 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final dateStr =
         '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: c.surface,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Daily Narrative Builder',
+            Text('Daily Narrative Builder',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 16)),
             Text('Pre-Session Narrative for $dateStr',
-                style: const TextStyle(
-                    color: AppColors.textMuted, fontSize: 12)),
+                style: TextStyle(
+                    color: c.textMuted, fontSize: 12)),
           ],
         ),
-        iconTheme: const IconThemeData(color: AppColors.textSecondary),
+        iconTheme: IconThemeData(color: c.textSecondary),
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
@@ -148,7 +149,7 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
           IconButton(
             icon: const Icon(Icons.print_rounded),
             tooltip: 'Print / Save as PDF',
-            color: AppColors.textSecondary,
+            color: c.textSecondary,
             onPressed: () => PrintService.printDailyNarrative(
               context: context,
               narrative: _buildSnapshot(),
@@ -159,15 +160,15 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
             child: TextButton.icon(
               onPressed: _saving ? null : _save,
               icon: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 14,
                       height: 14,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.primary))
-                  : const Icon(Icons.check_rounded, color: AppColors.primary, size: 18),
-              label: const Text('Save',
+                          strokeWidth: 2, color: c.primary))
+                  : Icon(Icons.check_rounded, color: c.primary, size: 18),
+              label: Text('Save',
                   style: TextStyle(
-                      color: AppColors.primary, fontWeight: FontWeight.w700)),
+                      color: c.primary, fontWeight: FontWeight.w700)),
             ),
           ),
         ],
@@ -183,13 +184,14 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ruleCard(),
+                      _ruleCard(c),
                       const SizedBox(height: AppSpacing.md),
                       // Pair + Session row
                       Row(
                         children: [
                           Expanded(
                             child: _inputField(
+                              c: c,
                               controller: _pairCtrl,
                               label: 'Pair / Instrument',
                               hint: 'e.g. EUR/USD, XAU/USD',
@@ -199,6 +201,7 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: _inputField(
+                              c: c,
                               controller: _sessionCtrl,
                               label: 'Session',
                               hint: 'London / New York / Asia',
@@ -297,12 +300,12 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
     );
   }
 
-  Widget _ruleCard() => Container(
+  Widget _ruleCard(ThemeColors c) => Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
+          color: AppColors.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
         ),
         child: const Row(
           children: [
@@ -323,6 +326,7 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
       );
 
   Widget _inputField({
+    required ThemeColors c,
     required TextEditingController controller,
     required String label,
     required String hint,
@@ -330,28 +334,25 @@ class _DailyNarrativeScreenState extends ConsumerState<DailyNarrativeScreen> {
   }) =>
       TextField(
         controller: controller,
-        style: const TextStyle(
-            color: AppColors.textPrimary, fontSize: 14),
+        style: TextStyle(color: c.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          prefixIcon: Icon(icon, size: 18, color: AppColors.textMuted),
-          labelStyle: const TextStyle(
-              color: AppColors.textSecondary, fontSize: 12),
-          hintStyle:
-              const TextStyle(color: AppColors.textMuted, fontSize: 12),
+          prefixIcon: Icon(icon, size: 18, color: c.textMuted),
+          labelStyle: TextStyle(color: c.textSecondary, fontSize: 12),
+          hintStyle: TextStyle(color: c.textMuted, fontSize: 12),
           filled: true,
-          fillColor: AppColors.surfaceElevated,
+          fillColor: c.surfaceElevated,
           isDense: true,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderSide: BorderSide(color: c.border),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            borderSide: const BorderSide(color: AppColors.border),
+            borderSide: BorderSide(color: c.border),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -383,11 +384,12 @@ class _SentenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,11 +398,11 @@ class _SentenceCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md, vertical: 10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.08),
+              color: color.withValues(alpha: 0.08),
               borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(AppSpacing.radiusMd)),
               border: Border(
-                  bottom: BorderSide(color: color.withOpacity(0.2))),
+                  bottom: BorderSide(color: color.withValues(alpha: 0.2))),
             ),
             child: Row(
               children: [
@@ -433,7 +435,7 @@ class _SentenceCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.loss.withOpacity(0.15),
+                      color: AppColors.loss.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(99),
                     ),
                     child: const Text('MANDATORY',
@@ -452,23 +454,23 @@ class _SentenceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(guidance,
-                    style: const TextStyle(
-                        color: AppColors.textSecondary,
+                    style: TextStyle(
+                        color: c.textSecondary,
                         fontSize: 12,
                         fontStyle: FontStyle.italic)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
+                    color: c.surfaceElevated,
                     borderRadius:
                         BorderRadius.circular(AppSpacing.radiusSm),
                     border: Border.all(
-                        color: color.withOpacity(0.15)),
+                        color: color.withValues(alpha: 0.15)),
                   ),
                   child: Text(template,
                       style: TextStyle(
-                          color: color.withOpacity(0.8),
+                          color: color.withValues(alpha: 0.85),
                           fontSize: 11,
                           fontStyle: FontStyle.italic)),
                 ),
@@ -476,27 +478,24 @@ class _SentenceCard extends StatelessWidget {
                 TextField(
                   controller: controller,
                   maxLines: 4,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 13),
+                  style: TextStyle(color: c.textPrimary, fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Write your sentence here...',
-                    hintStyle: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 12),
+                    hintStyle: TextStyle(
+                        color: c.textMuted, fontSize: 12),
                     filled: true,
-                    fillColor: AppColors.surfaceElevated,
+                    fillColor: c.surfaceElevated,
                     isDense: true,
                     contentPadding: const EdgeInsets.all(12),
                     border: OutlineInputBorder(
                       borderRadius:
                           BorderRadius.circular(AppSpacing.radiusSm),
-                      borderSide:
-                          const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: c.border),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius:
                           BorderRadius.circular(AppSpacing.radiusSm),
-                      borderSide:
-                          const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: c.border),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius:
