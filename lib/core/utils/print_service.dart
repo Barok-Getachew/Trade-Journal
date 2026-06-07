@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -28,6 +29,19 @@ final _kAccent3 = PdfColor.fromHex('#D97706');
 // ─────────────────────────────────────────────────────────────────────────────
 
 class PrintService {
+  /// On web, [Printing.layoutPdf] hits a MissingPluginException because the
+  /// native channel is unavailable. Instead we pre-save the bytes and use
+  /// [Printing.sharePdf] which triggers a browser download on web and opens
+  /// the share sheet on mobile, falling back to [layoutPdf] on desktop.
+  static Future<void> _printOrShare(pw.Document pdf, String filename) async {
+    if (kIsWeb) {
+      final bytes = await pdf.save();
+      await Printing.sharePdf(bytes: bytes, filename: filename);
+    } else {
+      await Printing.layoutPdf(onLayout: (_) => pdf.save());
+    }
+  }
+
   static Future<pw.ThemeData> _buildTheme() async {
     try {
       return pw.ThemeData.withFont(
@@ -116,7 +130,7 @@ class PrintService {
         ],
       ));
 
-      await Printing.layoutPdf(onLayout: (fmt) => pdf.save());
+      await _printOrShare(pdf, 'daily_narrative.pdf');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -204,7 +218,7 @@ class PrintService {
         ],
       ));
 
-      await Printing.layoutPdf(onLayout: (fmt) => pdf.save());
+      await _printOrShare(pdf, 'weekly_narrative.pdf');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -330,7 +344,7 @@ class PrintService {
         ],
       ));
 
-      await Printing.layoutPdf(onLayout: (fmt) => pdf.save());
+      await _printOrShare(pdf, 'trade_journal.pdf');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -498,13 +512,13 @@ class PrintService {
           width: double.infinity,
           padding: const pw.EdgeInsets.all(10),
           decoration: pw.BoxDecoration(
-            color: PdfColor.fromHex('#1A1D2E'),
+            color: _kSurface,
             borderRadius: pw.BorderRadius.circular(6),
             border: pw.Border.all(color: _kBorder),
           ),
           child: pw.Text(content,
               style: pw.TextStyle(
-                  color: PdfColors.white, fontSize: 11)),
+                  color: _kText, fontSize: 11)),
         ),
       ],
     );
