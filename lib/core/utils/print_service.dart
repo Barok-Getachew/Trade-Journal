@@ -1,61 +1,102 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import '../../domain/models/daily_narrative.dart';
 import '../../domain/models/weekly_narrative.dart';
 import '../../domain/models/trade.dart';
 import 'formatters.dart';
+import '../theme/app_colors.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Color constants for PDFs
+// Color constants for PDFs (Premium slate-based theme)
 // ─────────────────────────────────────────────────────────────────────────────
 
-final _kPrimary = PdfColor.fromHex('#3D7EFF');
-final _kProfit = PdfColor.fromHex('#059669');
-final _kLoss = PdfColor.fromHex('#DC2626');
-final _kBg = PdfColors.white;
-final _kSurface = PdfColor.fromHex('#F2F6FF');
-final _kBorder = PdfColor.fromHex('#D1D9EE');
-final _kText = PdfColor.fromHex('#0D1117');
-final _kMuted = PdfColor.fromHex('#6B7280');
-final _kAccent1 = PdfColor.fromHex('#7C3AED');
-final _kAccent2 = PdfColor.fromHex('#059669');
-final _kAccent3 = PdfColor.fromHex('#D97706');
+const _kPrimary = PdfColor.fromInt(0xFF3D7EFF); // Active Primary Blue
+const _kProfit = PdfColor.fromInt(0xFF10B981);  // Emerald Green
+const _kLoss = PdfColor.fromInt(0xFFEF4444);    // Coral Red
+const _kSurface = PdfColor.fromInt(0xFFF8FAFC); // Slate 50 (warm off-white)
+const _kBorder = PdfColor.fromInt(0xFFE2E8F0);  // Slate 200 (subtle dividers)
+const _kText = PdfColor.fromInt(0xFF0F172A);    // Slate 900 (deep dark text)
+const _kMuted = PdfColor.fromInt(0xFF64748B);   // Slate 500 (cool secondary gray)
+const _kAccent1 = PdfColor.fromInt(0xFF8B5CF6); // Purple
+const _kAccent2 = PdfColor.fromInt(0xFF0D9488); // Teal
+const _kAccent3 = PdfColor.fromInt(0xFFEA580C); // Orange/Amber
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main service
 // ─────────────────────────────────────────────────────────────────────────────
 
 class PrintService {
-  /// On web, [Printing.layoutPdf] hits a MissingPluginException because the
-  /// native channel is unavailable. Instead we pre-save the bytes and use
-  /// [Printing.sharePdf] which triggers a browser download on web and opens
-  /// the share sheet on mobile, falling back to [layoutPdf] on desktop.
-  static Future<void> _printOrShare(pw.Document pdf, String filename) async {
-    if (kIsWeb) {
-      final bytes = await pdf.save();
-      await Printing.sharePdf(bytes: bytes, filename: filename);
-    } else {
-      await Printing.layoutPdf(onLayout: (_) => pdf.save());
+  /// Opens a modern and beautiful fullscreen-like dialog with an interactive PDF preview.
+  /// Renders on Web, Desktop, and Mobile without native plugin issues.
+  static Future<void> _showPreview({
+    required BuildContext context,
+    required Future<pw.Document> Function() pdfBuilder,
+    required String filename,
+  }) async {
+    final c = AppColors.of(context);
+
+    // ── Step 1: Build PDF bytes with a loading dialog ──────────────────────
+    // PdfPreview widget crashes Flutter web with hundreds of
+    // "Assertion failed: window.dart:99" errors, so we skip it entirely.
+    // Instead: build bytes first, then show an action dialog. On web, the
+    // browser's own print dialog (triggered by Printing.layoutPdf) acts as
+    // the full-featured print preview.
+    Uint8List? bytes;
+    var spinnerShowing = true;
+
+    // Show spinner WITHOUT await so PDF builds in the background.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (_) => _PdfLoadingDialog(colors: c, filename: filename),
+    ).then((_) => spinnerShowing = false);
+
+    try {
+      final pdf = await pdfBuilder();
+      bytes = await pdf.save();
+    } catch (e) {
+      if (context.mounted && spinnerShowing) Navigator.of(context).pop();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate PDF: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+      return;
     }
+
+    // Dismiss spinner
+    if (context.mounted && spinnerShowing) Navigator.of(context).pop();
+    if (!context.mounted) return;
+
+    // ── Step 2: Show action dialog ─────────────────────────────────────────
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      builder: (_) => _PdfActionDialog(
+        filename: filename,
+        bytes: bytes!,
+        colors: c,
+      ),
+    );
   }
 
   static Future<pw.ThemeData> _buildTheme() async {
-    try {
-      return pw.ThemeData.withFont(
-        base: await PdfGoogleFonts.interRegular(),
-        bold: await PdfGoogleFonts.interBold(),
-        italic: await PdfGoogleFonts.interItalic(),
-      );
-    } catch (_) {
-      return pw.ThemeData.withFont(
-        base: pw.Font.helvetica(),
-        bold: pw.Font.helveticaBold(),
-        italic: pw.Font.helveticaOblique(),
-      );
-    }
+    // Use built-in Helvetica — no PdfGoogleFonts (printing package removed).
+    return pw.ThemeData.withFont(
+      base: pw.Font.helvetica(),
+      bold: pw.Font.helveticaBold(),
+      italic: pw.Font.helveticaOblique(),
+    );
   }
 
   // ── Daily Narrative ─────────────────────────────────────────────────────────
@@ -63,84 +104,93 @@ class PrintService {
     required BuildContext context,
     required DailyNarrative narrative,
   }) async {
-    try {
-      final pdf = pw.Document();
-      final d = narrative.narrativeDate;
-      final dateStr =
-          '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    await _showPreview(
+      context: context,
+      filename: 'daily_narrative_${narrative.narrativeDate.toIso8601String().substring(0, 10)}.pdf',
+      pdfBuilder: () async {
+        final pdf = pw.Document();
+        final d = narrative.narrativeDate;
+        final dateStr = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+        final theme = await _buildTheme();
 
-      final theme = await _buildTheme();
-
-      pdf.addPage(pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
-        theme: theme,
-        build: (ctx) => [
-          // ── Header ────────────────────────────────────────────────────────────
-          _buildHeader(
-            title: 'DAILY PRE-SESSION NARRATIVE',
-            subtitle: dateStr,
-            badge1:
-                narrative.pair?.isNotEmpty == true ? narrative.pair! : null,
-            badge2: narrative.session?.isNotEmpty == true
-                ? narrative.session!
-                : null,
-          ),
-          pw.SizedBox(height: 18),
-
-          // ── Rule card ─────────────────────────────────────────────────────────
-          _infoBox(
-            'Complete every morning before session opens. '
-            'If Sentence 5 is not complete — the trade does not exist.',
-          ),
-          pw.SizedBox(height: 16),
-
-          // ── Sentences ────────────────────────────────────────────────────────
-          _sentenceBlock(
-              1, 'HTF Bias & Delivery', narrative.s1HtfBias, _kPrimary),
-          _sentenceBlock(2, 'Current Price Action & Evidence',
-              narrative.s2PriceAction, _kAccent1),
-          _sentenceBlock(
-              3, 'Liquidity Draw', narrative.s3LiquidityDraw, _kAccent2),
-          _sentenceBlock(4, 'The Path', narrative.s4Path, _kAccent3),
-          _sentenceBlock(
-              5, 'Execution Plan ⚡ (MANDATORY)', narrative.s5Execution, _kLoss),
-
-          // ── Status ────────────────────────────────────────────────────────────
-          pw.SizedBox(height: 20),
-          _statusRow([
-            _StatusItem(
-              'Pre-Session Complete',
-              narrative.preSessionComplete,
+        pdf.addPage(pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(36),
+          theme: theme,
+          build: (ctx) => [
+            // ── Header ────────────────────────────────────────────────────────────
+            _buildHeader(
+              title: 'DAILY PRE-SESSION NARRATIVE',
+              subtitle: dateStr,
+              badge1: narrative.pair?.isNotEmpty == true ? narrative.pair! : null,
+              badge2: narrative.session?.isNotEmpty == true ? narrative.session! : null,
             ),
-            _StatusItem(
-              'Post-Trade Attached',
-              narrative.postAttachmentComplete,
-            ),
-          ]),
-
-          if (narrative.postAttachmentComplete) ...[
             pw.SizedBox(height: 16),
-            _sectionTitle('Post-Trade Review'),
-            if (narrative.postBreakdown?.isNotEmpty == true)
-              _textBlock('Breakdown', narrative.postBreakdown!),
-            if (narrative.postEmotionalState?.isNotEmpty == true)
-              _textBlock('Emotional State', narrative.postEmotionalState!),
-          ],
-        ],
-      ));
 
-      await _printOrShare(pdf, 'daily_narrative.pdf');
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to print PDF: $e'),
-            backgroundColor: const Color(0xFFFF4757),
-          ),
-        );
-      }
-    }
+            // ── Rule card ─────────────────────────────────────────────────────────
+            _infoBox(
+              'Complete every morning before session opens. '
+              'If Sentence 5 is not complete — the trade does not exist.',
+            ),
+            pw.SizedBox(height: 16),
+
+            // ── Sentences ────────────────────────────────────────────────────────
+            _sentenceBlock(
+              1,
+              'HTF Bias & Delivery',
+              narrative.s1HtfBias,
+              _kPrimary,
+              question: 'What has already been delivered and what is the institutional positioning?',
+            ),
+            _sentenceBlock(
+              2,
+              'Current Price Action & Evidence',
+              narrative.s2PriceAction,
+              _kAccent1,
+              question: 'What is price doing RIGHT NOW and what is the institutional fingerprint proving it?',
+            ),
+            _sentenceBlock(
+              3,
+              'Liquidity Draw',
+              narrative.s3LiquidityDraw,
+              _kAccent2,
+              question: 'What has not been taken yet and why do institutions need it?',
+            ),
+            _sentenceBlock(
+              4,
+              'The Path',
+              narrative.s4Path,
+              _kAccent3,
+              question: 'How will price get there? What manipulation happens before delivery?',
+            ),
+            _sentenceBlock(
+              5,
+              'Execution Plan ⚡ (MANDATORY)',
+              narrative.s5Execution,
+              _kLoss,
+              question: 'This must be complete BEFORE price reaches your zone. No exceptions.',
+            ),
+
+            // ── Status ────────────────────────────────────────────────────────────
+            pw.SizedBox(height: 20),
+            _statusRow([
+              _StatusItem('Pre-Session Complete', narrative.preSessionComplete),
+              _StatusItem('Post-Trade Attached', narrative.postAttachmentComplete),
+            ]),
+
+            if (narrative.postAttachmentComplete) ...[
+              pw.SizedBox(height: 20),
+              _sectionTitle('Post-Trade Review'),
+              if (narrative.postBreakdown?.isNotEmpty == true)
+                _textBlock('Breakdown & Execution Notes', narrative.postBreakdown!),
+              if (narrative.postEmotionalState?.isNotEmpty == true)
+                _textBlock('Emotional State & Psychology', narrative.postEmotionalState!),
+            ],
+          ],
+        ));
+        return pdf;
+      },
+    );
   }
 
   // ── Weekly Narrative ────────────────────────────────────────────────────────
@@ -148,87 +198,95 @@ class PrintService {
     required BuildContext context,
     required WeeklyNarrative narrative,
   }) async {
-    try {
-      final pdf = pw.Document();
-      final w = narrative.weekOf;
-      final wEnd = w.add(const Duration(days: 6));
-      final weekStr =
-          '${w.day}/${w.month}/${w.year} – ${wEnd.day}/${wEnd.month}/${wEnd.year}';
+    await _showPreview(
+      context: context,
+      filename: 'weekly_narrative_${narrative.weekOf.toIso8601String().substring(0, 10)}.pdf',
+      pdfBuilder: () async {
+        final pdf = pw.Document();
+        final w = narrative.weekOf;
+        final wEnd = w.add(const Duration(days: 6));
+        final weekStr = '${w.day}/${w.month}/${w.year} – ${wEnd.day}/${wEnd.month}/${wEnd.year}';
+        final theme = await _buildTheme();
 
-      final theme = await _buildTheme();
+        pdf.addPage(pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(36),
+          theme: theme,
+          build: (ctx) => [
+            // ── Header ─────────────────────────────────────────────────────────
+            _buildHeader(
+              title: 'WEEKLY PRE-WEEK NARRATIVE',
+              subtitle: 'Week of $weekStr',
+              badge1: narrative.primaryInstrument?.isNotEmpty == true ? narrative.primaryInstrument! : null,
+              badge2: narrative.highImpactNews?.isNotEmpty == true ? '📰 ${narrative.highImpactNews}' : null,
+            ),
+            pw.SizedBox(height: 16),
 
-      pdf.addPage(pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
-        theme: theme,
-        build: (ctx) => [
-          // ── Header ─────────────────────────────────────────────────────────
-          _buildHeader(
-            title: 'WEEKLY PRE-WEEK NARRATIVE',
-            subtitle: 'Week of $weekStr',
-            badge1: narrative.primaryInstrument?.isNotEmpty == true
-                ? narrative.primaryInstrument!
-                : null,
-            badge2: narrative.highImpactNews?.isNotEmpty == true
-                ? '📰 ${narrative.highImpactNews}'
-                : null,
-          ),
-          pw.SizedBox(height: 18),
+            // ── Steps ──────────────────────────────────────────────────────────
+            _sentenceBlock(
+              1,
+              'COT & Macro Positioning',
+              narrative.step1Cot,
+              _kPrimary,
+              question: 'Where are institutions positioned heading into this week?',
+            ),
+            _sentenceBlock(
+              2,
+              'HTF Structure',
+              narrative.step2HtfStructure,
+              _kAccent1,
+              question: 'What does the weekly/daily chart say about where price is going?',
+            ),
 
-          // ── Steps ──────────────────────────────────────────────────────────
-          _sentenceBlock(
-              1, 'COT & Macro Positioning', narrative.step1Cot, _kPrimary),
-          _sentenceBlock(2, 'HTF Structure', narrative.step2HtfStructure, _kAccent1),
+            // Liquidity map table (Step 3)
+            if (narrative.liquidityMap.isNotEmpty) ...[
+              pw.SizedBox(height: 12),
+              _liqTable(narrative.liquidityMap),
+            ],
 
-          // Liquidity map table
-          if (narrative.liquidityMap.isNotEmpty) ...[
-            pw.SizedBox(height: 10),
-            _liqTable(narrative.liquidityMap),
+            _sentenceBlock(
+              4,
+              'AMD Weekly Bias',
+              narrative.step4Amd,
+              _kAccent2,
+              question: 'How will institutions use this week\'s structure and news?',
+            ),
+
+            // Scenarios
+            pw.SizedBox(height: 16),
+            _sectionTitle('Step 5 — The Two Scenarios'),
+            if (narrative.scenarioA?.isNotEmpty == true)
+              _textBlock('Scenario A (Primary Path)', narrative.scenarioA!),
+            if (narrative.scenarioB?.isNotEmpty == true)
+              _textBlock('Scenario B (Alternative Path)', narrative.scenarioB!),
+
+            // Reflection (if done)
+            if (narrative.reflectionComplete) ...[
+              pw.SizedBox(height: 20),
+              _divider(),
+              pw.SizedBox(height: 12),
+              _sectionTitle('Week-End Reflection'),
+              if (narrative.reflScenarioPlayed?.isNotEmpty == true)
+                _textBlock('Scenario That Played Out', narrative.reflScenarioPlayed!),
+              pw.SizedBox(height: 8),
+              _statusRow([
+                _StatusItem('AMD Correctly Identified', narrative.reflAmdCorrect),
+              ]),
+              if (narrative.reflCleanestDay?.isNotEmpty == true)
+                _textBlock('Cleanest Day of the Week', narrative.reflCleanestDay!),
+              if (narrative.reflCompleteS5Count != null)
+                _textBlock(
+                  'Execution Rate',
+                  'Completed Sentence 5 checklist for ${narrative.reflCompleteS5Count} trades this week',
+                ),
+              if (narrative.reflCarryForward?.isNotEmpty == true)
+                _textBlock('Lessons & Carry Forward', narrative.reflCarryForward!),
+            ],
           ],
-
-          _sentenceBlock(4, 'AMD Weekly Bias', narrative.step4Amd, _kAccent2),
-
-          // Scenarios
-          pw.SizedBox(height: 10),
-          _sectionTitle('Step 5 — The Two Scenarios'),
-          if (narrative.scenarioA?.isNotEmpty == true)
-            _textBlock('Scenario A', narrative.scenarioA!),
-          if (narrative.scenarioB?.isNotEmpty == true)
-            _textBlock('Scenario B', narrative.scenarioB!),
-
-          // Reflection (if done)
-          if (narrative.reflectionComplete) ...[
-            pw.SizedBox(height: 20),
-            _divider(),
-            pw.SizedBox(height: 12),
-            _sectionTitle('Week-End Reflection'),
-            if (narrative.reflScenarioPlayed?.isNotEmpty == true)
-              _textBlock('Scenario That Played', narrative.reflScenarioPlayed!),
-            _statusRow([
-              _StatusItem('AMD Correctly Identified', narrative.reflAmdCorrect),
-            ]),
-            if (narrative.reflCleanestDay?.isNotEmpty == true)
-              _textBlock('Cleanest Day', narrative.reflCleanestDay!),
-            if (narrative.reflCompleteS5Count != null)
-              _textBlock('Complete S5 Count',
-                  '${narrative.reflCompleteS5Count} trades'),
-            if (narrative.reflCarryForward?.isNotEmpty == true)
-              _textBlock('Carry Forward', narrative.reflCarryForward!),
-          ],
-        ],
-      ));
-
-      await _printOrShare(pdf, 'weekly_narrative.pdf');
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to print PDF: $e'),
-            backgroundColor: const Color(0xFFFF4757),
-          ),
-        );
-      }
-    }
+        ));
+        return pdf;
+      },
+    );
   }
 
   // ── Trade Journal PDF ────────────────────────────────────────────────────────
@@ -236,125 +294,166 @@ class PrintService {
     required BuildContext context,
     required Trade trade,
   }) async {
-    try {
-      final pdf = pw.Document();
-      final theme = await _buildTheme();
+    await _showPreview(
+      context: context,
+      filename: 'trade_${trade.symbol}_${trade.entryAt.toIso8601String().substring(0, 10)}.pdf',
+      pdfBuilder: () async {
+        final pdf = pw.Document();
+        final theme = await _buildTheme();
 
-      pdf.addPage(pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
-        theme: theme,
-        build: (ctx) => [
-          // ── Header ─────────────────────────────────────────────────────────
-          _buildHeader(
-            title: 'TRADE JOURNAL',
-            subtitle: trade.symbol,
-            badge1: trade.direction.name.toUpperCase(),
-            badge2: trade.assetClass.label,
-          ),
-          pw.SizedBox(height: 18),
+        Uint8List? imageBytes;
+        if (trade.screenshotUrl != null && trade.screenshotUrl!.isNotEmpty) {
+          try {
+            final response = await http.get(Uri.parse(trade.screenshotUrl!));
+            if (response.statusCode == 200) {
+              imageBytes = response.bodyBytes;
+            }
+          } catch (e) {
+            debugPrint('Failed to download trade image: $e');
+          }
+        }
 
-          // ── Performance table ───────────────────────────────────────────────
-          _sectionTitle('Performance'),
-          pw.Table(
-            border: pw.TableBorder.all(
-                color: _kBorder, width: 0.5),
-            children: [
-              _tableRow('Net P&L', Fmt.currency(trade.netPnl),
-                  valueColor: trade.isWin ? _kProfit : _kLoss),
-              _tableRow('R-Multiple', Fmt.rMultiple(trade.rMultiple),
-                  valueColor: trade.isWin ? _kProfit : _kLoss),
-              _tableRow('Gross P&L', Fmt.currency(trade.grossPnl)),
-              _tableRow('Commission', Fmt.currency(trade.commission)),
-              _tableRow('Return %', Fmt.percent(trade.returnPct)),
-              _tableRow('Holding', Fmt.duration(trade.holdingDuration)),
-              _tableRow(
-                  'Risk:Reward', '1:${trade.riskReward.toStringAsFixed(2)}'),
+        // 2. Add Main Details Page
+        pdf.addPage(pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(36),
+          theme: theme,
+          build: (ctx) => [
+            // Header
+            _buildHeader(
+              title: 'TRADE PERFORMANCE REPORT',
+              subtitle: trade.symbol,
+              badge1: trade.direction.name.toUpperCase(),
+              badge2: trade.assetClass.label,
+            ),
+            pw.SizedBox(height: 20),
+
+            // Side-by-side Tables for Clean UI
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Left Column
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _sectionTitle('Performance Results'),
+                      pw.Table(
+                        border: pw.TableBorder(
+                          horizontalInside: pw.BorderSide(color: _kBorder, width: 0.5),
+                          bottom: pw.BorderSide(color: _kBorder, width: 0.5),
+                        ),
+                        children: [
+                          _tableRow('Net P&L', Fmt.currency(trade.netPnl),
+                              valueColor: trade.isWin ? _kProfit : _kLoss),
+                          _tableRow('R-Multiple', Fmt.rMultiple(trade.rMultiple),
+                              valueColor: trade.isWin ? _kProfit : _kLoss),
+                          _tableRow('Gross P&L', Fmt.currency(trade.grossPnl)),
+                          _tableRow('Commission', Fmt.currency(trade.commission)),
+                          _tableRow('Return %', Fmt.percent(trade.returnPct)),
+                          _tableRow('Holding Duration', Fmt.duration(trade.holdingDuration)),
+                          _tableRow('Risk:Reward Ratio', '1:${trade.riskReward.toStringAsFixed(2)}'),
+                        ],
+                      ),
+                      pw.SizedBox(height: 20),
+
+                      _sectionTitle('Psychology & Context'),
+                      pw.Table(
+                        border: pw.TableBorder(
+                          horizontalInside: pw.BorderSide(color: _kBorder, width: 0.5),
+                          bottom: pw.BorderSide(color: _kBorder, width: 0.5),
+                        ),
+                        children: [
+                          _tableRow('Emotion Before', trade.emotionBefore?.label ?? '—'),
+                          _tableRow('Emotion After', trade.emotionAfter?.label ?? '—'),
+                          _tableRow('Confidence Level', '${trade.confidence}/5'),
+                          _tableRow('Rules Followed', trade.rulesFollowed ? 'Yes ✓' : 'No ✗',
+                              valueColor: trade.rulesFollowed ? _kProfit : _kLoss),
+                          _tableRow('Impulse Trade', trade.isImpulse ? 'Yes' : 'No',
+                              valueColor: trade.isImpulse ? _kLoss : _kMuted),
+                          if (trade.mistakeType?.isNotEmpty == true)
+                            _tableRow('Mistake Type', trade.mistakeType!, valueColor: _kLoss),
+                          _tableRow('Setup Quality', '${trade.setupQuality}/5'),
+                          if (trade.session != null)
+                            _tableRow('Session', trade.session!.label),
+                          if (trade.marketCondition != null)
+                            _tableRow('Market Condition', trade.marketCondition!.label),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 24),
+                // Right Column
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _sectionTitle('Execution Metrics'),
+                      pw.Table(
+                        border: pw.TableBorder(
+                          horizontalInside: pw.BorderSide(color: _kBorder, width: 0.5),
+                          bottom: pw.BorderSide(color: _kBorder, width: 0.5),
+                        ),
+                        children: [
+                          _tableRow('Entry Price', Fmt.price(trade.entryPrice)),
+                          _tableRow('Exit Price', Fmt.price(trade.exitPrice)),
+                          _tableRow('Stop Loss', Fmt.price(trade.stopLoss)),
+                          _tableRow('Take Profit', Fmt.price(trade.takeProfit)),
+                          _tableRow('Position Size', trade.positionSize.toString()),
+                          _tableRow('Risk Amount', Fmt.currency(trade.riskAmount)),
+                          _tableRow('Risk %', '${trade.riskPct.toStringAsFixed(2)}%'),
+                          _tableRow('Entry Time', Fmt.dateTime(trade.entryAt)),
+                          _tableRow('Exit Time', Fmt.dateTime(trade.exitAt)),
+                        ],
+                      ),
+                      pw.SizedBox(height: 20),
+
+                      _sectionTitle('Pre-Trade Checklist'),
+                      pw.SizedBox(height: 6),
+                      _statusRow([
+                        _StatusItem('Plan Match', trade.planMatch),
+                        _StatusItem('Risk OK', trade.riskOk),
+                        _StatusItem('RR OK', trade.rrOk),
+                        _StatusItem('Confirmation', trade.confirmation),
+                        _StatusItem('Screenshot', trade.screenshotReady),
+                      ]),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // Reflection Notes
+            if (trade.reflection?.isNotEmpty == true) ...[
+              pw.SizedBox(height: 20),
+              _textBlock('Reflection & Trade Notes', trade.reflection!),
             ],
-          ),
-          pw.SizedBox(height: 14),
 
-          // ── Trade Details ──────────────────────────────────────────────────
-          _sectionTitle('Entry / Exit'),
-          pw.Table(
-            border: pw.TableBorder.all(
-                color: _kBorder, width: 0.5),
-            children: [
-              _tableRow('Entry Price', Fmt.price(trade.entryPrice)),
-              _tableRow('Exit Price', Fmt.price(trade.exitPrice)),
-              _tableRow('Stop Loss', Fmt.price(trade.stopLoss)),
-              _tableRow('Take Profit', Fmt.price(trade.takeProfit)),
-              _tableRow('Position Size', trade.positionSize.toString()),
-              _tableRow('Risk Amount', Fmt.currency(trade.riskAmount)),
-              _tableRow('Risk %', '${trade.riskPct.toStringAsFixed(2)}%'),
-              _tableRow('Entry Time', Fmt.dateTime(trade.entryAt)),
-              _tableRow('Exit Time', Fmt.dateTime(trade.exitAt)),
+            // Trade Screenshot
+            if (imageBytes != null) ...[
+              pw.SizedBox(height: 20),
+              _sectionTitle('Chart Screenshot'),
+              pw.SizedBox(height: 8),
+              pw.Container(
+                constraints: const pw.BoxConstraints(maxHeight: 350),
+                alignment: pw.Alignment.center,
+                decoration: const pw.BoxDecoration(
+                  color: _kSurface,
+                ),
+                child: pw.Image(
+                  pw.MemoryImage(imageBytes),
+                  fit: pw.BoxFit.contain,
+                ),
+              ),
             ],
-          ),
-          pw.SizedBox(height: 14),
-
-          // ── Psychology ────────────────────────────────────────────────────
-          _sectionTitle('Psychology & Context'),
-          pw.Table(
-            border: pw.TableBorder.all(
-                color: _kBorder, width: 0.5),
-            children: [
-              _tableRow(
-                  'Emotion Before', trade.emotionBefore?.label ?? '—'),
-              _tableRow(
-                  'Emotion After', trade.emotionAfter?.label ?? '—'),
-              _tableRow(
-                  'Confidence', '${trade.confidence}/5'),
-              _tableRow(
-                  'Rules Followed',
-                  trade.rulesFollowed ? 'Yes ✓' : 'No ✗',
-                  valueColor:
-                      trade.rulesFollowed ? _kProfit : _kLoss),
-              _tableRow(
-                  'Impulse Trade',
-                  trade.isImpulse ? 'Yes' : 'No',
-                  valueColor: trade.isImpulse ? _kLoss : _kMuted),
-              if (trade.mistakeType?.isNotEmpty == true)
-                _tableRow('Mistake', trade.mistakeType!,
-                    valueColor: _kAccent3),
-              _tableRow('Setup Quality', '${trade.setupQuality}/5'),
-              if (trade.session != null)
-                _tableRow('Session', trade.session!.label),
-              if (trade.marketCondition != null)
-                _tableRow('Market Condition', trade.marketCondition!.label),
-            ],
-          ),
-
-          // ── Reflection ────────────────────────────────────────────────────
-          if (trade.reflection?.isNotEmpty == true) ...[
-            pw.SizedBox(height: 14),
-            _textBlock('Reflection', trade.reflection!),
           ],
+        ));
 
-          // ── Checklist ────────────────────────────────────────────────────
-          pw.SizedBox(height: 14),
-          _sectionTitle('Entry Checklist'),
-          _statusRow([
-            _StatusItem('Plan Match', trade.planMatch),
-            _StatusItem('Risk OK', trade.riskOk),
-            _StatusItem('RR OK', trade.rrOk),
-            _StatusItem('Confirmation', trade.confirmation),
-            _StatusItem('Screenshot', trade.screenshotReady),
-          ]),
-        ],
-      ));
 
-      await _printOrShare(pdf, 'trade_journal.pdf');
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to print PDF: $e'),
-            backgroundColor: const Color(0xFFFF4757),
-          ),
-        );
-      }
-    }
+        return pdf;
+      },
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -368,23 +467,18 @@ class PrintService {
     String? badge2,
   }) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(16),
-      decoration: pw.BoxDecoration(
-        color: _kSurface,
-        borderRadius: pw.BorderRadius.circular(10),
-        border: pw.Border.all(color: _kBorder, width: 1.0),
-      ),
+      padding: const pw.EdgeInsets.symmetric(vertical: 12),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
             children: [
               pw.Container(
                 width: 4,
-                height: 30,
-                decoration: pw.BoxDecoration(
+                height: 28,
+                decoration: const pw.BoxDecoration(
                   color: _kPrimary,
-                  borderRadius: pw.BorderRadius.circular(2),
                 ),
               ),
               pw.SizedBox(width: 10),
@@ -397,7 +491,8 @@ class PrintService {
                             color: _kPrimary,
                             fontSize: 10,
                             fontWeight: pw.FontWeight.bold,
-                            letterSpacing: 1.2)),
+                            letterSpacing: 1.5)),
+                    pw.SizedBox(height: 2),
                     pw.Text(subtitle,
                         style: pw.TextStyle(
                             color: _kText,
@@ -406,86 +501,90 @@ class PrintService {
                   ],
                 ),
               ),
+              if (badge1 != null || badge2 != null) ...[
+                pw.Row(
+                  children: [
+                    if (badge1 != null) _badge(badge1, _kPrimary),
+                    if (badge2 != null) ...[
+                      pw.SizedBox(width: 8),
+                      _badge(badge2, _kMuted),
+                    ],
+                  ],
+                ),
+              ],
             ],
           ),
-          if (badge1 != null || badge2 != null) ...[
-            pw.SizedBox(height: 10),
-            pw.Row(children: [
-              if (badge1 != null) _badge(badge1, _kPrimary),
-              if (badge2 != null) ...[
-                pw.SizedBox(width: 8),
-                _badge(badge2, _kMuted),
-              ],
-            ]),
-          ],
+          pw.SizedBox(height: 8),
+          pw.Container(
+            height: 1,
+            color: _kBorder,
+          ),
         ],
       ),
     );
   }
 
+  static PdfColor _tintColor(PdfColor color, double factor) {
+    final r = color.red + (1.0 - color.red) * (1.0 - factor);
+    final g = color.green + (1.0 - color.green) * (1.0 - factor);
+    final b = color.blue + (1.0 - color.blue) * (1.0 - factor);
+    return PdfColor(r, g, b);
+  }
+
   static pw.Widget _sentenceBlock(
-      int n, String title, String? content, PdfColor color) {
+    int n,
+    String title,
+    String? content,
+    PdfColor color, {
+    String? question,
+  }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.SizedBox(height: 10),
+        pw.SizedBox(height: 12),
         pw.Container(
           decoration: pw.BoxDecoration(
             color: _kSurface,
-            borderRadius: pw.BorderRadius.circular(8),
-            border: pw.Border.all(color: _kBorder),
+            border: pw.Border(
+              left: pw.BorderSide(color: color, width: 3.0),
+            ),
           ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
-                decoration: pw.BoxDecoration(
-                  color: PdfColor(
-                      color.red, color.green, color.blue, 0.08),
-                  borderRadius: const pw.BorderRadius.only(
-                    topLeft: pw.Radius.circular(8),
-                    topRight: pw.Radius.circular(8),
-                  ),
-                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                color: _tintColor(color, 0.05),
                 child: pw.Row(children: [
-                  pw.Container(
-                    width: 22,
-                    height: 22,
-                    decoration: pw.BoxDecoration(
-                      color: color,
-                      shape: pw.BoxShape.circle,
-                    ),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text('$n',
-                        style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 11,
-                            fontWeight: pw.FontWeight.bold)),
-                  ),
-                  pw.SizedBox(width: 8),
-                  pw.Text(title,
+                  pw.Text('$n. $title',
                       style: pw.TextStyle(
                           color: color,
-                          fontSize: 12,
-                          fontWeight: pw.FontWeight.bold)),
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                          letterSpacing: 0.5)),
                 ]),
               ),
+              if (question != null && question.isNotEmpty)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.only(left: 12, right: 12, top: 6),
+                  child: pw.Text(
+                    question,
+                    style: pw.TextStyle(
+                      color: _kMuted,
+                      fontSize: 9,
+                      fontStyle: pw.FontStyle.italic,
+                    ),
+                  ),
+                ),
               pw.Padding(
-                padding: const pw.EdgeInsets.all(12),
+                padding: const pw.EdgeInsets.only(left: 12, right: 12, top: 8, bottom: 12),
                 child: pw.Text(
-                  content?.isNotEmpty == true
-                      ? content!
-                      : '(not filled)',
+                  content?.isNotEmpty == true ? content! : '(not filled)',
                   style: pw.TextStyle(
-                    color: content?.isNotEmpty == true
-                        ? _kText
-                        : _kMuted,
+                    color: content?.isNotEmpty == true ? _kText : _kMuted,
                     fontSize: 11,
-                    fontStyle: content?.isNotEmpty == true
-                        ? pw.FontStyle.normal
-                        : pw.FontStyle.italic,
+                    height: 1.3,
+                    fontStyle: content?.isNotEmpty == true ? pw.FontStyle.normal : pw.FontStyle.italic,
                   ),
                 ),
               ),
@@ -504,21 +603,21 @@ class PrintService {
         pw.Text(label,
             style: pw.TextStyle(
                 color: _kMuted,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: pw.FontWeight.bold,
                 letterSpacing: 0.8)),
         pw.SizedBox(height: 4),
         pw.Container(
           width: double.infinity,
           padding: const pw.EdgeInsets.all(10),
-          decoration: pw.BoxDecoration(
+          decoration: const pw.BoxDecoration(
             color: _kSurface,
-            borderRadius: pw.BorderRadius.circular(6),
-            border: pw.Border.all(color: _kBorder),
+            border: pw.Border(
+              left: pw.BorderSide(color: _kBorder, width: 2.0),
+            ),
           ),
           child: pw.Text(content,
-              style: pw.TextStyle(
-                  color: _kText, fontSize: 11)),
+              style: pw.TextStyle(color: _kText, fontSize: 11, height: 1.3)),
         ),
       ],
     );
@@ -530,41 +629,50 @@ class PrintService {
       child: pw.Text(title,
           style: pw.TextStyle(
               color: _kText,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: pw.FontWeight.bold)),
     );
   }
 
   static pw.Widget _infoBox(String text) {
     return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: pw.BoxDecoration(
-        color: PdfColor(_kPrimary.red, _kPrimary.green, _kPrimary.blue, 0.1),
-        borderRadius: pw.BorderRadius.circular(6),
-        border: pw.Border.all(
-            color: PdfColor(
-                _kPrimary.red, _kPrimary.green, _kPrimary.blue, 0.4)),
+        color: _tintColor(_kPrimary, 0.05),
+        border: const pw.Border(
+          left: pw.BorderSide(color: _kPrimary, width: 3.0),
+        ),
       ),
-      child: pw.Text(text,
-          style:
-              pw.TextStyle(color: _kPrimary, fontSize: 10)),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          color: _kPrimary,
+          fontSize: 10,
+          fontWeight: pw.FontWeight.bold,
+          height: 1.2,
+        ),
+      ),
     );
   }
 
   static pw.Widget _badge(String label, PdfColor color) {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: pw.BoxDecoration(
-        color: PdfColor(color.red, color.green, color.blue, 0.15),
-        borderRadius: pw.BorderRadius.circular(99),
+        color: _tintColor(color, 0.08),
         border: pw.Border.all(
-            color: PdfColor(color.red, color.green, color.blue, 0.4)),
+          color: _tintColor(color, 0.3),
+          width: 1.0,
+        ),
       ),
-      child: pw.Text(label,
-          style: pw.TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: pw.FontWeight.bold)),
+      child: pw.Text(
+        label,
+        style: pw.TextStyle(
+          color: color,
+          fontSize: 9,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -580,8 +688,10 @@ class PrintService {
       children: [
         _sectionTitle('Step 3 — Weekly Liquidity Map'),
         pw.Table(
-          border: pw.TableBorder.all(
-              color: _kBorder, width: 0.5),
+          border: pw.TableBorder(
+            horizontalInside: pw.BorderSide(color: _kBorder, width: 0.5),
+            bottom: pw.BorderSide(color: _kBorder, width: 0.5),
+          ),
           columnWidths: const {
             0: pw.FlexColumnWidth(3),
             1: pw.FlexColumnWidth(2),
@@ -589,8 +699,7 @@ class PrintService {
           },
           children: [
             pw.TableRow(
-              decoration:
-                  pw.BoxDecoration(color: _kSurface),
+              decoration: pw.BoxDecoration(color: _kSurface),
               children: [
                 _th('Type'),
                 _th('Level'),
@@ -628,17 +737,19 @@ class PrintService {
       {PdfColor? valueColor}) {
     return pw.TableRow(children: [
       pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: pw.Text(label,
-            style: pw.TextStyle(color: _kMuted, fontSize: 10)),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: pw.Text(label, style: pw.TextStyle(color: _kMuted, fontSize: 9)),
       ),
       pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: pw.Text(value ?? '—',
-            style: pw.TextStyle(
-                color: valueColor ?? _kText,
-                fontSize: 10,
-                fontWeight: pw.FontWeight.bold)),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: pw.Text(
+          value ?? '—',
+          style: pw.TextStyle(
+              color: valueColor ?? _kText,
+              fontSize: 9,
+              fontWeight: pw.FontWeight.bold),
+          textAlign: pw.TextAlign.right,
+        ),
       ),
     ]);
   }
@@ -663,3 +774,228 @@ class _StatusItem {
   final bool? value;
   const _StatusItem(this.label, this.value);
 }
+
+// ── PDF Loading Dialog ───────────────────────────────────────────────────────
+
+class _PdfLoadingDialog extends StatelessWidget {
+  final dynamic colors;
+  final String filename;
+  const _PdfLoadingDialog({required this.colors, required this.filename});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = colors;
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: c.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: c.primary, strokeWidth: 3),
+            const SizedBox(height: 20),
+            Text(
+              'Building PDF…',
+              style: TextStyle(
+                color: c.textPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              filename,
+              style: TextStyle(color: c.textMuted, fontSize: 11),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── PDF Action Dialog ────────────────────────────────────────────────────────
+
+class _PdfActionDialog extends StatelessWidget {
+  final String filename;
+  final Uint8List bytes;
+  final dynamic colors;
+
+  const _PdfActionDialog({
+    required this.filename,
+    required this.bytes,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = colors;
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: c.surface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 480),
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Icon ──────────────────────────────────────────────────────
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: c.primaryDim,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.picture_as_pdf_rounded,
+                  color: c.primary, size: 32),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'PDF Ready',
+              style: TextStyle(
+                color: c.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              filename,
+              style: TextStyle(color: c.textMuted, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: c.primaryDim,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline_rounded,
+                      size: 14, color: c.primary),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Click "Print / Preview" to see a full print preview in the browser.',
+                      style: TextStyle(color: c.primary, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // ── Buttons ───────────────────────────────────────────────────
+            Row(
+              children: [
+                // Open in new tab — user can print with Ctrl+P / browser menu
+                Expanded(
+                  child: _ActionBtn(
+                    icon: Icons.open_in_new_rounded,
+                    label: 'Open / Print',
+                    primary: c.primary,
+                    filled: false,
+                    onTap: () {
+                      final blob = html.Blob([bytes], 'application/pdf');
+                      final url = html.Url.createObjectUrlFromBlob(blob);
+                      html.window.open(url, '_blank');
+                      // Revoke after a short delay
+                      Future.delayed(
+                        const Duration(seconds: 30),
+                        () => html.Url.revokeObjectUrl(url),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Download PDF directly
+                Expanded(
+                  child: _ActionBtn(
+                    icon: Icons.download_rounded,
+                    label: 'Download',
+                    primary: c.primary,
+                    filled: true,
+                    onTap: () {
+                      final blob = html.Blob([bytes], 'application/pdf');
+                      final url = html.Url.createObjectUrlFromBlob(blob);
+                      html.AnchorElement(href: url)
+                        ..setAttribute('download', filename)
+                        ..click();
+                      html.Url.revokeObjectUrl(url);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Close',
+                  style: TextStyle(color: c.textMuted, fontSize: 13)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color primary;
+  final bool filled;
+  final VoidCallback onTap;
+
+  const _ActionBtn({
+    required this.icon,
+    required this.label,
+    required this.primary,
+    required this.filled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: filled ? primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: filled
+                ? null
+                : Border.all(color: primary.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: filled ? Colors.white : primary),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: filled ? Colors.white : primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

@@ -31,8 +31,7 @@ dependencies:
   # File handling (screenshots)
   file_picker: ^8.1.2
 
-  # Print / PDF export
-  printing: ^5.13.1
+  # PDF export (printing package removed — dart:html used directly on web)
   pdf: ^3.10.8
 
   # Localization / formatting
